@@ -22,6 +22,10 @@ function print(messages) {
       console.log(`\n\x1b[32mBOT:\x1b[0m [template "${m.name}" (${m.language})] ${m.params.join(' | ')}`);
       continue;
     }
+    if (m.type === 'media') {
+      console.log(`\n\x1b[32mBOT:\x1b[0m [${m.mediaType}] ${m.url}${m.caption ? '\n     ' + m.caption : ''}`);
+      continue;
+    }
     console.log('\n\x1b[32mBOT:\x1b[0m ' + m.text.replace(/\n/g, '\n     '));
     if (m.type === 'buttons' || m.type === 'list') {
       if (m.type === 'list') console.log(`     [${m.button}]`);
@@ -51,7 +55,7 @@ rl.on('line', async (line) => {
   const incoming = option ? { kind: 'reply', id: option.id } : { kind: 'text', text: input };
   if (option) console.log(`     (tapped "${option.title}")`);
   try {
-    print(await engine.handle(USER, incoming));
+    print(await engine.handle(USER, incoming, { name: 'Test User', phone: '910000000000' }));
   } catch (err) {
     console.error('ERROR:', err.message);
   }

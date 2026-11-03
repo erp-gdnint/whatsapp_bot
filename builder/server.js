@@ -95,7 +95,7 @@ app.post('/api/preview', wrap(async (req, res) => {
   const errors = validateFlow(flow, actions);
   if (errors.length) return res.json({ errors });
   const engine = new FlowEngine({ flow, actions, store: previewStore });
-  const messages = await engine.handle(user, incoming);
+  const messages = await engine.handle(user, incoming, { name: 'Preview User', phone: '910000000000' });
   const session = await previewStore.get(user);
   res.json({ messages, node: session && session.node });
 }));

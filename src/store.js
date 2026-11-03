@@ -19,8 +19,10 @@ class MemoryStore {
     return entry.value;
   }
 
-  async set(userId, value) {
-    this.map.set(userId, { value, expires: Date.now() + this.ttlMs });
+  // ttlMinutes (optional) overrides the default, e.g. the flow's own session timeout.
+  async set(userId, value, ttlMinutes) {
+    const ttl = ttlMinutes ? ttlMinutes * 60 * 1000 : this.ttlMs;
+    this.map.set(userId, { value, expires: Date.now() + ttl });
   }
 
   async delete(userId) {

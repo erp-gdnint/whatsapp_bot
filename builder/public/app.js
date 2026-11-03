@@ -2,15 +2,24 @@
 
 // Same limits as src/validate.js (the server re-checks everything on save).
 const LIMITS = {
-  buttons: 3, buttonTitle: 20, listRows: 10, listRowTitle: 24, listRowDescription: 72,
-  listButton: 20, sectionTitle: 24, bodyText: 1024, plainText: 4096,
+  buttons: 10, buttonsPerMessage: 3, buttonTitle: 20, listRows: 10, listRowTitle: 24, listRowDescription: 72,
+  listButton: 20, sectionTitle: 24, bodyText: 1024, plainText: 4096, caption: 1024, sessionTimeoutMinutes: 1440,
+};
+
+const INPUT_KINDS = {
+  text: 'Any text',
+  email: 'Email address',
+  phone: 'Phone number',
+  number: 'Number',
+  date: 'Date (saved as YYYY-MM-DD)',
 };
 
 const TYPE_INFO = {
   list: { label: 'List menu', short: 'LIST', hint: 'Up to 10 options behind a button' },
-  buttons: { label: 'Buttons', short: 'BUTTONS', hint: 'Up to 3 reply buttons' },
+  buttons: { label: 'Buttons', short: 'BUTTONS', hint: 'Up to 10 buttons, sent 3 per message' },
   message: { label: 'Message', short: 'MESSAGE', hint: 'Plain text, then continues' },
-  input: { label: 'Text input', short: 'INPUT', hint: 'Asks the user to type an answer' },
+  media: { label: 'Image / video / document', short: 'MEDIA', hint: 'Sends a file from a public link' },
+  input: { label: 'Text input', short: 'INPUT', hint: 'Asks for text, email, phone, number or date' },
   action: { label: 'Action (code / API)', short: 'ACTION', hint: 'Runs a function from src/actions' },
   template: { label: 'WhatsApp template', short: 'TEMPLATE', hint: 'Sends a pre-approved template' },
 };
@@ -105,6 +114,7 @@ function defaultNode(type) {
     case 'list': return { type, text: 'Please choose a topic.', button: 'View options', sectionTitle: 'Options', options: [{ id: to, title: 'Main menu' }] };
     case 'buttons': return { type, text: 'Please choose an option.', options: [{ id: to, title: 'Main menu' }] };
     case 'message': return { type, text: 'New message', next: to };
+    case 'media': return { type, mediaType: 'image', url: 'https://', caption: '', next: to };
     case 'input': return { type, text: 'Please type your answer.', saveAs: 'answer', minLength: 1, next: to };
     case 'action': return { type, action: S.actions[0] || '', next: to };
     case 'template': return { type, name: 'hello_world', language: 'en_US', params: [], next: to };
@@ -112,7 +122,7 @@ function defaultNode(type) {
 }
 
 function createNode(type, pos) {
-  const base = { list: 'menu', buttons: 'menu', message: 'message', input: 'ask', action: 'action', template: 'template' }[type];
+  const base = { list: 'menu', buttons: 'menu', message: 'message', media: 'media', input: 'ask', action: 'action', template: 'template' }[type];
   let id = prompt(`Name for the new ${TYPE_INFO[type].label} node\n(lowercase letters, digits and _)`, uniqueId(base));
   if (id === null) return null;
   id = id.trim();
@@ -266,7 +276,9 @@ function buildCard(id, node, errs, reach) {
   if (S.liveNode === id) cls.push('live');
   const summary = node.type === 'action' ? `Runs ${node.action || '?'}()`
     : node.type === 'template' ? `Template ${node.name || '?'} (${node.language || '?'})`
-      : node.text || '';
+      : node.type === 'media' ? `${node.mediaType || 'file'}: ${node.caption || node.url || ''}`
+        : node.type === 'input' && node.validate && node.validate !== 'text' ? `[${node.validate}] ${node.text || ''}`
+          : node.text || '';
   const canAdd = (node.type === 'list' || node.type === 'buttons') &&
     (node.options || []).length < (node.type === 'list' ? LIMITS.listRows : LIMITS.buttons);
 
@@ -505,7 +517,7 @@ function nodePanel(id) {
     ? h('p', { class: 'note' }, '★ This is the start node: new users see it first.')
     : h('button', { class: 'secondary', onclick: () => { S.flow.start = id; markChanged({ inspector: true }); } }, '★ Make this the start node'));
 
-  const textHint = 'Formatting: *bold* _italic_ ~strike~. Insert saved answers with {{name}}.';
+  const textHint = 'Formatting: *bold* _italic_ ~strike~. Insert saved answers with {{name}}, the user\'s WhatsApp name with {{contact_name}}, their number with {{contact_phone}}.';
   switch (node.type) {
     case 'list':
       els.push(field('Message text', textArea(node.text, (v) => { node.text = v; markChanged(); }, LIMITS.bodyText), textHint));
@@ -516,20 +528,48 @@ function nodePanel(id) {
     case 'buttons':
       els.push(field('Message text', textArea(node.text, (v) => { node.text = v; markChanged(); }, LIMITS.bodyText), textHint));
       els.push(optionsEditor(id, node));
+      if ((node.options || []).length > LIMITS.buttonsPerMessage) {
+        els.push(field('Text above extra buttons', textInput(node.moreText, (v) => { if (v) node.moreText = v; else delete node.moreText; markChanged(); }, LIMITS.bodyText, '…'),
+          'WhatsApp shows 3 buttons per message, so buttons 4+ go in follow-up messages with this text.'));
+      }
       break;
     case 'message':
       els.push(field('Message text', textArea(node.text, (v) => { node.text = v; markChanged(); }, LIMITS.plainText), textHint));
       els.push(field('Then go to', targetSelect(node.next, (v) => { node.next = v; })));
       break;
-    case 'input':
-      els.push(field('Question', textArea(node.text, (v) => { node.text = v; markChanged(); }, LIMITS.plainText), textHint));
-      els.push(field('Save answer as', textInput(node.saveAs, (v) => { node.saveAs = v.trim(); markChanged(); }),
-        `Use it later as {{${node.saveAs || 'name'}}}, and in actions as vars.${node.saveAs || 'name'}.`));
-      els.push(field('Minimum length', h('input', { type: 'number', min: 1, value: node.minLength || 1,
-        oninput: (e) => { node.minLength = Math.max(1, Number(e.target.value) || 1); markChanged(); } })));
-      els.push(field('Reply when too short (optional)', textArea(node.errorText, (v) => { if (v) node.errorText = v; else delete node.errorText; markChanged(); }, LIMITS.plainText, 2)));
+    case 'media':
+      els.push(field('File type', h('select', { value: node.mediaType, onchange: (e) => { node.mediaType = e.target.value; markChanged({ inspector: true }); } },
+        h('option', { value: 'image' }, 'Image (JPG or PNG, max 5 MB)'),
+        h('option', { value: 'video' }, 'Video (MP4, max 16 MB)'),
+        h('option', { value: 'document' }, 'Document (PDF etc., max 100 MB)'))));
+      els.push(field('Public link (https://)', textInput(node.url, (v) => { node.url = v.trim(); markChanged(); }, null, 'https://example.com/brochure.pdf'),
+        'WhatsApp downloads the file from this link, so it must open without a login. Google Drive "view" links do not work; use a direct download link.'));
+      els.push(field('Caption (optional)', textArea(node.caption, (v) => { if (v) node.caption = v; else delete node.caption; markChanged(); }, LIMITS.caption, 2), textHint));
+      if (node.mediaType === 'document') {
+        els.push(field('File name shown to user (optional)', textInput(node.filename, (v) => { if (v) node.filename = v; else delete node.filename; markChanged(); }, null, 'Brochure.pdf')));
+      }
       els.push(field('Then go to', targetSelect(node.next, (v) => { node.next = v; })));
       break;
+    case 'input': {
+      const kind = node.validate || 'text';
+      els.push(field('Question', textArea(node.text, (v) => { node.text = v; markChanged(); }, LIMITS.plainText), textHint));
+      els.push(field('Expected answer', h('select', { value: kind, onchange: (e) => {
+        if (e.target.value === 'text') delete node.validate; else node.validate = e.target.value;
+        markChanged({ inspector: true });
+      } }, Object.entries(INPUT_KINDS).map(([k, label]) => h('option', { value: k }, label))),
+      kind === 'text' ? null : 'If the answer does not match, the bot asks again. The cleaned value is saved (e.g. phone without spaces).'));
+      els.push(field('Save answer as', textInput(node.saveAs, (v) => { node.saveAs = v.trim(); markChanged(); }),
+        `Use it later as {{${node.saveAs || 'name'}}}, and in actions as vars.${node.saveAs || 'name'}.`));
+      if (kind === 'text') {
+        els.push(field('Minimum length', h('input', { type: 'number', min: 1, value: node.minLength || 1,
+          oninput: (e) => { node.minLength = Math.max(1, Number(e.target.value) || 1); markChanged(); } })));
+      }
+      els.push(field(kind === 'text' ? 'Reply when too short (optional)' : 'Reply when the answer is invalid (optional)',
+        textArea(node.errorText, (v) => { if (v) node.errorText = v; else delete node.errorText; markChanged(); }, LIMITS.plainText, 2),
+        'Leave empty to use the default message.'));
+      els.push(field('Then go to', targetSelect(node.next, (v) => { node.next = v; })));
+      break;
+    }
     case 'action':
       els.push(field('Action', h('select', { value: node.action, onchange: (e) => { node.action = e.target.value; markChanged(); } },
         !S.actions.includes(node.action) ? h('option', { value: node.action || '' }, node.action ? `${node.action} (missing!)` : '— choose —') : null,
@@ -596,6 +636,18 @@ function settingsPanel() {
   els.push(h('p', { class: 'note' }, 'Click a node to edit it. Drag from a ● dot onto a node to connect them; drop on empty space to create a new node.'));
   els.push(field('Bot name', textInput(S.flow.name, (v) => { S.flow.name = v; markChanged(); })));
   els.push(field('Start node', targetSelect(S.flow.start, (v) => { S.flow.start = v; }), 'Shown to new users and after a session expires.'));
+  els.push(field('Session timeout (minutes)', h('input', {
+    type: 'number', min: 1, max: LIMITS.sessionTimeoutMinutes, placeholder: '30 (default)',
+    value: (S.flow.settings && S.flow.settings.sessionTimeoutMinutes) || '',
+    oninput: (e) => {
+      const v = Math.round(Number(e.target.value));
+      S.flow.settings ||= {};
+      if (v > 0) S.flow.settings.sessionTimeoutMinutes = v;
+      else delete S.flow.settings.sessionTimeoutMinutes;
+      if (!Object.keys(S.flow.settings).length) delete S.flow.settings;
+      markChanged();
+    },
+  }), 'After this much silence, the next message starts again from the start node. Max 1440 (24 h).'));
 
   // Keywords: typed words that jump to a node from anywhere.
   const entries = Object.entries(S.flow.keywords || {});
@@ -747,6 +799,16 @@ function showBotMessage(m) {
     return bubble('bot', h('div', { class: 'tpl' }, '📄 Template ', h('b', {}, m.name), ` (${m.language})`,
       m.params.length ? h('small', {}, `Parameters: ${m.params.join(' | ')}`) : null,
       h('small', {}, 'The real template text comes from WhatsApp Manager.')));
+  }
+  if (m.type === 'media') {
+    const cap = h('div', {});
+    if (m.caption) cap.innerHTML = waFormat(m.caption);
+    const safeUrl = /^https:\/\//.test(m.url) ? m.url : null;
+    const view = !safeUrl ? h('small', {}, `Invalid link: ${m.url}`)
+      : m.mediaType === 'image' ? h('img', { src: safeUrl, alt: 'image', class: 'media' })
+        : m.mediaType === 'video' ? h('video', { src: safeUrl, controls: true, class: 'media' })
+          : h('a', { href: safeUrl, target: '_blank', rel: 'noopener' }, `📄 ${m.filename || 'Document'}`);
+    return bubble('bot', view, cap);
   }
   const txt = h('div', {});
   txt.innerHTML = waFormat(m.text);

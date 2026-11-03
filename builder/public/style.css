@@ -114,6 +114,8 @@ header .toggle { display: flex; align-items: center; gap: 5px; color: var(--mute
 .t-input .badge { background: var(--t-input); }
 .t-action .badge { background: var(--t-action); }
 .t-template .badge { background: var(--t-template); }
+.t-media .badge { background: #0369a1; }
+.bubble .media { display: block; max-width: 100%; border-radius: 6px; margin-bottom: 4px; }
 .card-text { padding: 0 10px 8px; color: var(--muted); font-size: 12.5px; white-space: pre-line; max-height: 56px; overflow: hidden; }
 .ports { border-top: 1px solid var(--line); }
 .port { position: relative; display: flex; gap: 6px; align-items: center; padding: 5px 22px 5px 10px; font-size: 12.5px; border-bottom: 1px solid #f0f1f4; }

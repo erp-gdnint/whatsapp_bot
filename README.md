@@ -66,9 +66,10 @@ Every screen is a node, and each option's `id` is the name of the next node.
 | Node type | What it does | Required fields |
 | --- | --- | --- |
 | `list` | Menu with up to 10 rows (opens from a button) | `text`, `button` (≤20 chars), `options[{id,title≤24,description≤72}]` |
-| `buttons` | Up to 3 reply buttons | `text`, `options[{id,title≤20}]` |
+| `buttons` | Up to 10 reply buttons. WhatsApp shows 3 per message, so the rest go in follow-up messages | `text`, `options[{id,title≤20}]`, optional `moreText` (text above the extra buttons, default `…`) |
 | `message` | Plain text, then continues automatically | `text`, `next` |
-| `input` | Asks the user to type something | `text`, `saveAs`, `next`, optional `minLength`, `errorText` |
+| `media` | Sends an image, video or document from a public `https://` link, then continues | `mediaType` (`image`/`video`/`document`), `url`, `next`, optional `caption`, `filename` |
+| `input` | Asks the user to type something; re-asks if the answer doesn't match | `text`, `saveAs`, `next`, optional `validate` (`text`/`email`/`phone`/`number`/`date`), `minLength`, `errorText` |
 | `action` | Runs code (API call, database, sheet) | `action`, `next`, optional `onError`, `params` |
 | `template` | Sends a pre-approved WhatsApp template, then continues | `name`, `language` (e.g. `en_US`), `next`, optional `params` (body `{{1}}`, `{{2}}`…) |
 
@@ -76,7 +77,10 @@ Templates are created and approved in *WhatsApp Manager > Message templates*. Yo
 
 - `keywords` lists words that jump to a node from anywhere, for example `menu` and `hi`.
 - `{{name}}` in any text inserts a saved value, for example `{{question}}`, or `{{ticketId}}` returned by an action.
-- Sessions expire after `SESSION_TTL_MINUTES` (default 30). After that, the next message starts again at `start`.
+- `{{contact_name}}` (the user's WhatsApp profile name) and `{{contact_phone}}` are always available.
+- Input checks save a cleaned value: phone without spaces (`+919876543210`), number with a dot (`2.5`), date as `YYYY-MM-DD`, email in lowercase.
+- Sessions expire after `settings.sessionTimeoutMinutes` in the flow (1–1440; set it in the builder's flow settings), otherwise after `SESSION_TTL_MINUTES` (default 30). After that, the next message starts again at `start`.
+- Media limits (WhatsApp): image JPG/PNG up to 5 MB, video MP4 up to 16 MB, document up to 100 MB. The link must download directly without a login; Google Drive "view" links don't work.
 
 ## 4. Adding real APIs later
 

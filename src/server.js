@@ -95,13 +95,13 @@ app.post('/webhook', (req, res) => {
   }
   res.sendStatus(200); // answer fast, then process; slow answers make Meta retry
 
-  for (const { from, messageId, incoming } of parseIncoming(req.body)) {
+  for (const { from, messageId, incoming, contact } of parseIncoming(req.body)) {
     if (isDuplicate(messageId)) continue;
     enqueue(from, async () => {
       try {
         console.log(`<- ${mask(from)}`, incoming.kind === 'text' ? `"${incoming.text}"` : incoming.kind, incoming.id || '');
         wa.markRead(messageId);
-        const replies = await engine.handle(from, incoming);
+        const replies = await engine.handle(from, incoming, contact);
         await wa.sendAll(from, replies);
         console.log(`-> ${mask(from)} ${replies.length} message(s)`);
       } catch (err) {

@@ -69,6 +69,13 @@ function createWhatsAppClient({ token, phoneNumberId, version = 'v23.0', logger 
               : {}),
           },
         };
+      case 'media': {
+        // Media is sent by public URL; WhatsApp downloads it. Captions work on all three types.
+        const media = { link: msg.url };
+        if (msg.caption) media.caption = msg.caption;
+        if (msg.mediaType === 'document' && msg.filename) media.filename = msg.filename;
+        return { ...base, type: msg.mediaType, [msg.mediaType]: media };
+      }
       default:
         throw new Error(`Unknown outgoing message type "${msg.type}"`);
     }
@@ -91,14 +98,18 @@ function createWhatsAppClient({ token, phoneNumberId, version = 'v23.0', logger 
   return { sendAll, markRead, toPayload };
 }
 
-// Pulls user messages out of a webhook body. Delivery/read status updates are ignored.
+// Pulls user messages out of a webhook body, with the sender's WhatsApp profile name.
+// Delivery/read status updates are ignored.
 function parseIncoming(body) {
   const events = [];
   if (!body || body.object !== 'whatsapp_business_account') return events;
   for (const entry of body.entry || []) {
     for (const change of entry.changes || []) {
       const value = change.value || {};
+      const contacts = value.contacts || [];
       for (const m of value.messages || []) {
+        const profile = contacts.find((c) => c.wa_id === m.from) || contacts[0] || {};
+        const contact = { name: (profile.profile && profile.profile.name) || '', phone: m.from };
         let incoming;
         if (m.type === 'text') incoming = { kind: 'text', text: m.text.body };
         else if (m.type === 'interactive' && m.interactive.button_reply)
@@ -107,7 +118,7 @@ function parseIncoming(body) {
           incoming = { kind: 'reply', id: m.interactive.list_reply.id };
         else if (m.type === 'button') incoming = { kind: 'reply', id: m.button.payload };
         else incoming = { kind: 'unsupported' };
-        events.push({ from: m.from, messageId: m.id, incoming });
+        events.push({ from: m.from, messageId: m.id, incoming, contact });
       }
     }
   }

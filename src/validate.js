@@ -4,16 +4,20 @@
 const LIMITS = {
   bodyText: 1024, // interactive message body
   plainText: 4096, // normal text message
-  buttons: 3,
+  buttons: 10, // per node; sent as messages of 3 buttons each (WhatsApp's per-message limit)
   buttonTitle: 20,
   listRows: 10,
   listRowTitle: 24,
   listRowDescription: 72,
   listButton: 20,
   sectionTitle: 24,
+  caption: 1024,
+  sessionTimeoutMinutes: 1440, // WhatsApp's customer service window is 24 hours
 };
 
-const TYPES = ['message', 'buttons', 'list', 'input', 'action', 'template'];
+const TYPES = ['message', 'buttons', 'list', 'input', 'action', 'template', 'media'];
+const INPUT_KINDS = ['text', 'email', 'phone', 'number', 'date'];
+const MEDIA_TYPES = ['image', 'video', 'document'];
 
 function validateFlow(flow, actions = {}) {
   const errors = [];
@@ -31,6 +35,9 @@ function validateFlow(flow, actions = {}) {
   };
 
   ref('start', flow.start);
+  const timeout = flow.settings && flow.settings.sessionTimeoutMinutes;
+  if (timeout !== undefined && !(Number.isInteger(timeout) && timeout >= 1 && timeout <= LIMITS.sessionTimeoutMinutes))
+    errors.push(`settings: sessionTimeoutMinutes must be a whole number from 1 to ${LIMITS.sessionTimeoutMinutes}`);
   for (const [word, target] of Object.entries(flow.keywords || {})) ref(`keyword "${word}"`, target);
 
   for (const [id, node] of Object.entries(nodes)) {
@@ -46,7 +53,18 @@ function validateFlow(flow, actions = {}) {
         break;
       case 'input':
         len(at, node.text, LIMITS.plainText);
-        if (!node.saveAs) errors.push(`${at}: input needs "saveAs"`);
+        if (!/^\w+$/.test(node.saveAs || '')) errors.push(`${at}: input needs "saveAs" (letters, digits, _)`);
+        if (node.validate && !INPUT_KINDS.includes(node.validate))
+          errors.push(`${at}: "validate" must be one of ${INPUT_KINDS.join(', ')}`);
+        ref(`${at} next`, node.next);
+        break;
+      case 'media':
+        if (!MEDIA_TYPES.includes(node.mediaType))
+          errors.push(`${at}: "mediaType" must be one of ${MEDIA_TYPES.join(', ')}`);
+        if (!/^https:\/\/\S+$/.test(node.url || '') && !/^\{\{\s*\w+\s*\}\}$/.test(node.url || ''))
+          errors.push(`${at}: "url" must be a public https:// link`);
+        if (node.caption && node.caption.length > LIMITS.caption)
+          errors.push(`${at}: caption is ${node.caption.length} chars, WhatsApp max is ${LIMITS.caption}`);
         ref(`${at} next`, node.next);
         break;
       case 'action':
@@ -70,6 +88,8 @@ function validateFlow(flow, actions = {}) {
         const max = isList ? LIMITS.listRows : LIMITS.buttons;
         if (!opts.length) errors.push(`${at}: needs at least 1 option`);
         if (opts.length > max) errors.push(`${at}: ${opts.length} options, WhatsApp max is ${max}`);
+        if (!isList && node.moreText && node.moreText.length > LIMITS.bodyText)
+          errors.push(`${at}: "moreText" over ${LIMITS.bodyText} chars`);
         if (isList) {
           len(`${at} button`, node.button, LIMITS.listButton);
           if (node.sectionTitle) len(`${at} sectionTitle`, node.sectionTitle, LIMITS.sectionTitle);

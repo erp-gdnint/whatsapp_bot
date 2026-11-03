@@ -25,7 +25,32 @@
         { "id": "hours", "title": "Business hours", "description": "When we are open" },
         { "id": "pricing", "title": "Pricing & plans", "description": "Our plans and what they include" },
         { "id": "contact", "title": "Contact & location", "description": "Phone, email and address" },
-        { "id": "ask", "title": "Ask a question", "description": "Type your question and our team will reply" }
+        { "id": "ask", "title": "Ask a question", "description": "Type your question and our team will reply" },
+        { "id": "callback_phone", "title": "Request a callback", "description": "We call you back on a day you choose" }
+      ]
+    },
+
+    "callback_phone": {
+      "type": "input",
+      "text": "📞 Sure {{contact_name}}! Which number should we call?\nType it with country code, e.g. +91 98765 43210.",
+      "validate": "phone",
+      "saveAs": "callback_phone",
+      "next": "callback_date"
+    },
+
+    "callback_date": {
+      "type": "input",
+      "text": "📅 On which date? Type it like 25/12/2026.",
+      "validate": "date",
+      "saveAs": "callback_date",
+      "next": "callback_done"
+    },
+
+    "callback_done": {
+      "type": "buttons",
+      "text": "✅ Thanks {{contact_name}}! We will call *{{callback_phone}}* on *{{callback_date}}*.",
+      "options": [
+        { "id": "main", "title": "Main menu" }
       ]
     },
 

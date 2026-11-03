@@ -1,22 +1,56 @@
 // The flow engine: takes one incoming user event, moves the user through the
 // JSON flow, and returns the messages to send back. It knows nothing about
-// WhatsApp's API, so the same engine runs in the terminal simulator and the server.
+// WhatsApp's API, so the same engine runs in the terminal simulator, the builder
+// preview and the server.
 //
 // Incoming event:  { kind: 'text', text }  |  { kind: 'reply', id }  |  { kind: 'unsupported' }
+// Contact (optional): { name, phone }  -> saved as {{contact_name}} and {{contact_phone}}
 // Outgoing message: { type: 'text', text }
-//                   { type: 'buttons', text, options: [{ id, title }] }
+//                   { type: 'buttons', text, options: [{ id, title }] }          (max 3 per message)
 //                   { type: 'list', text, button, sectionTitle, options: [{ id, title, description }] }
+//                   { type: 'media', mediaType: 'image'|'video'|'document', url, caption, filename }
 //                   { type: 'template', name, language, params: [text] }
+
+const BUTTONS_PER_MESSAGE = 3; // WhatsApp's limit; longer button menus are split into several messages
 
 const DEFAULT_MESSAGES = {
   fallback: "Sorry, I didn't understand that. Please choose one of the options.",
   unsupported: 'I can only read text messages and button taps for now.',
   error: 'Something went wrong on our side. Please type *menu* to start again.',
   inputTooShort: 'Please type a little more.',
+  invalidEmail: 'Please type a valid email address, like name@example.com.',
+  invalidPhone: 'Please type a valid phone number with country code, like +91 98765 43210.',
+  invalidNumber: 'Please type a number only, like 25 or 2.5.',
+  invalidDate: 'Please type a date like 25/12/2026.',
 };
 
 const fill = (text, vars) =>
   String(text).replace(/\{\{\s*(\w+)\s*\}\}/g, (_, key) => (vars[key] ?? '').toString());
+
+// Accepts DD/MM/YYYY, DD-MM-YYYY, DD.MM.YYYY or YYYY-MM-DD and returns YYYY-MM-DD, or null.
+function parseDate(value) {
+  let d, m, y;
+  let match = /^(\d{1,2})[/.-](\d{1,2})[/.-](\d{4})$/.exec(value);
+  if (match) [, d, m, y] = match;
+  else if ((match = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(value))) [, y, m, d] = match;
+  else return null;
+  const date = new Date(Date.UTC(+y, +m - 1, +d));
+  if (date.getUTCFullYear() !== +y || date.getUTCMonth() !== +m - 1 || date.getUTCDate() !== +d) return null;
+  return date.toISOString().slice(0, 10);
+}
+
+// Each check returns the cleaned value to save, or null when the input is not acceptable.
+const INPUT_CHECKS = {
+  text: (v) => v,
+  email: (v) => (/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v) ? v.toLowerCase() : null),
+  phone: (v) => {
+    const cleaned = v.replace(/[\s().-]/g, '');
+    return /^\+?\d{7,15}$/.test(cleaned) ? cleaned : null;
+  },
+  number: (v) => (/^-?\d+([.,]\d+)?$/.test(v) ? v.replace(',', '.') : null),
+  date: parseDate,
+};
+const INPUT_ERRORS = { email: 'invalidEmail', phone: 'invalidPhone', number: 'invalidNumber', date: 'invalidDate' };
 
 class FlowEngine {
   constructor({ flow, store, actions = {}, logger = console }) {
@@ -39,8 +73,10 @@ class FlowEngine {
     await this.store.delete(userId);
   }
 
-  async handle(userId, incoming) {
+  async handle(userId, incoming, contact = {}) {
     const session = (await this.store.get(userId)) || { node: null, vars: {} };
+    if (contact.name) session.vars.contact_name = contact.name;
+    if (contact.phone) session.vars.contact_phone = contact.phone;
     const out = [];
     const nodes = this.flow.nodes;
     if (session.node && !Object.prototype.hasOwnProperty.call(nodes, session.node)) session.node = null; // node was deleted
@@ -53,11 +89,11 @@ class FlowEngine {
       if (keyword) {
         target = keyword;
       } else if (current && current.type === 'input') {
-        const min = current.minLength || 1;
-        if (typed.length < min) {
-          out.push({ type: 'text', text: fill(current.errorText || this.text.inputTooShort, session.vars) });
+        const problem = this.checkInput(current, typed);
+        if (problem) {
+          out.push({ type: 'text', text: fill(problem, session.vars) });
         } else {
-          session.vars[current.saveAs] = typed.slice(0, current.maxLength || 1000);
+          session.vars[current.saveAs] = INPUT_CHECKS[current.validate || 'text'](typed).slice(0, current.maxLength || 1000);
           target = current.next;
         }
       } else if (!current) {
@@ -75,8 +111,18 @@ class FlowEngine {
     }
 
     if (target) await this.run(target, session, userId, out);
-    await this.store.set(userId, session);
+    const ttl = this.flow.settings && this.flow.settings.sessionTimeoutMinutes;
+    await this.store.set(userId, session, ttl);
     return out;
+  }
+
+  // Returns the message to send when the typed answer is not acceptable, or null when it is.
+  checkInput(node, typed) {
+    const kind = node.validate || 'text';
+    if (kind === 'text') {
+      return typed.length < (node.minLength || 1) ? node.errorText || this.text.inputTooShort : null;
+    }
+    return INPUT_CHECKS[kind](typed) === null ? node.errorText || this.text[INPUT_ERRORS[kind]] : null;
   }
 
   // Walks from a node until it reaches one that waits for the user.
@@ -97,6 +143,16 @@ class FlowEngine {
           out.push({ type: 'text', text });
           id = null; // wait for the user to type
           break;
+        case 'media':
+          out.push({
+            type: 'media',
+            mediaType: node.mediaType,
+            url: fill(node.url, session.vars),
+            caption: node.caption ? fill(node.caption, session.vars) : undefined,
+            filename: node.filename ? fill(node.filename, session.vars) : undefined,
+          });
+          id = node.next;
+          break;
         case 'template':
           out.push({
             type: 'template',
@@ -106,14 +162,20 @@ class FlowEngine {
           });
           id = node.next;
           break;
-        case 'buttons':
-          out.push({
-            type: 'buttons',
-            text,
-            options: node.options.map((o) => ({ id: o.id, title: fill(o.title, session.vars) })),
-          });
+        case 'buttons': {
+          // WhatsApp shows at most 3 buttons per message, so longer menus go out as several
+          // messages. Every button stays tappable, so no extra state is needed.
+          const options = node.options.map((o) => ({ id: o.id, title: fill(o.title, session.vars) }));
+          for (let i = 0; i < options.length; i += BUTTONS_PER_MESSAGE) {
+            out.push({
+              type: 'buttons',
+              text: i === 0 ? text : fill(node.moreText || '…', session.vars),
+              options: options.slice(i, i + BUTTONS_PER_MESSAGE),
+            });
+          }
           id = null;
           break;
+        }
         case 'list':
           out.push({
             type: 'list',
@@ -151,4 +213,4 @@ class FlowEngine {
   }
 }
 
-module.exports = { FlowEngine };
+module.exports = { FlowEngine, parseDate, BUTTONS_PER_MESSAGE };
