@@ -1,0 +1,112 @@
+{
+  "name": "Demo FAQ bot",
+  "start": "main",
+  "keywords": {
+    "hi": "main",
+    "hello": "main",
+    "hey": "main",
+    "menu": "main",
+    "start": "main",
+    "help": "main"
+  },
+  "messages": {
+    "fallback": "Sorry, I didn't understand that. Please tap one of the options, or type *menu*.",
+    "unsupported": "I can only read text messages and button taps for now.",
+    "error": "Something went wrong on our side. Please type *menu* to start again."
+  },
+  "nodes": {
+    "main": {
+      "type": "list",
+      "text": "👋 Welcome to *Demo Company*!\nHow can we help you today? Tap *View topics* to choose.",
+      "button": "View topics",
+      "sectionTitle": "Topics",
+      "options": [
+        { "id": "about", "title": "About us", "description": "Who we are and what we do" },
+        { "id": "hours", "title": "Business hours", "description": "When we are open" },
+        { "id": "pricing", "title": "Pricing & plans", "description": "Our plans and what they include" },
+        { "id": "contact", "title": "Contact & location", "description": "Phone, email and address" },
+        { "id": "ask", "title": "Ask a question", "description": "Type your question and our team will reply" }
+      ]
+    },
+
+    "about": {
+      "type": "buttons",
+      "text": "*About us*\nDemo Company helps small businesses manage orders and customers. We have served 500+ clients since 2015.",
+      "options": [
+        { "id": "main", "title": "Main menu" },
+        { "id": "ask", "title": "Ask a question" }
+      ]
+    },
+
+    "hours": {
+      "type": "buttons",
+      "text": "*Business hours*\nMon–Fri: 9:30 am – 6:30 pm\nSat: 10:00 am – 2:00 pm\nSun: closed",
+      "options": [
+        { "id": "main", "title": "Main menu" },
+        { "id": "contact", "title": "Contact us" }
+      ]
+    },
+
+    "pricing": {
+      "type": "buttons",
+      "text": "*Pricing & plans*\nWe have two plans. Which one would you like to know about?",
+      "options": [
+        { "id": "plan_basic", "title": "Basic plan" },
+        { "id": "plan_pro", "title": "Pro plan" },
+        { "id": "main", "title": "Main menu" }
+      ]
+    },
+
+    "plan_basic": {
+      "type": "buttons",
+      "text": "*Basic plan* – ₹499/month\n• 1 user\n• Up to 100 orders a month\n• Email support",
+      "options": [
+        { "id": "pricing", "title": "Back to plans" },
+        { "id": "ask", "title": "Ask a question" },
+        { "id": "main", "title": "Main menu" }
+      ]
+    },
+
+    "plan_pro": {
+      "type": "buttons",
+      "text": "*Pro plan* – ₹1,499/month\n• 5 users\n• Unlimited orders\n• Phone and WhatsApp support",
+      "options": [
+        { "id": "pricing", "title": "Back to plans" },
+        { "id": "ask", "title": "Ask a question" },
+        { "id": "main", "title": "Main menu" }
+      ]
+    },
+
+    "contact": {
+      "type": "buttons",
+      "text": "*Contact & location*\n📞 +91 00000 00000\n✉️ hello@example.com\n📍 Sample Street, Bengaluru",
+      "options": [
+        { "id": "main", "title": "Main menu" },
+        { "id": "ask", "title": "Ask a question" }
+      ]
+    },
+
+    "ask": {
+      "type": "input",
+      "text": "✍️ Please type your question in one message.\n(Type *menu* to go back.)",
+      "saveAs": "question",
+      "minLength": 5,
+      "errorText": "Please type a bit more (at least 5 characters).",
+      "next": "ask_save"
+    },
+
+    "ask_save": {
+      "type": "action",
+      "action": "saveQuestion",
+      "next": "ask_done"
+    },
+
+    "ask_done": {
+      "type": "buttons",
+      "text": "✅ Thanks! We saved your question.\nReference: *{{ticketId}}*\nOur team will reply here soon.",
+      "options": [
+        { "id": "main", "title": "Main menu" }
+      ]
+    }
+  }
+}
