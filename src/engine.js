@@ -6,6 +6,7 @@
 // Outgoing message: { type: 'text', text }
 //                   { type: 'buttons', text, options: [{ id, title }] }
 //                   { type: 'list', text, button, sectionTitle, options: [{ id, title, description }] }
+//                   { type: 'template', name, language, params: [text] }
 
 const DEFAULT_MESSAGES = {
   fallback: "Sorry, I didn't understand that. Please choose one of the options.",
@@ -19,10 +20,15 @@ const fill = (text, vars) =>
 
 class FlowEngine {
   constructor({ flow, store, actions = {}, logger = console }) {
-    this.flow = flow;
     this.store = store;
     this.actions = actions;
     this.logger = logger;
+    this.setFlow(flow);
+  }
+
+  // Swap in a new (already validated) flow, e.g. after the visual builder saves.
+  setFlow(flow) {
+    this.flow = flow;
     this.text = { ...DEFAULT_MESSAGES, ...(flow.messages || {}) };
     this.keywords = Object.fromEntries(
       Object.entries(flow.keywords || {}).map(([k, v]) => [k.trim().toLowerCase(), v])
@@ -37,6 +43,7 @@ class FlowEngine {
     const session = (await this.store.get(userId)) || { node: null, vars: {} };
     const out = [];
     const nodes = this.flow.nodes;
+    if (session.node && !Object.prototype.hasOwnProperty.call(nodes, session.node)) session.node = null; // node was deleted
     const current = session.node ? nodes[session.node] : null;
     let target = null;
 
@@ -89,6 +96,15 @@ class FlowEngine {
         case 'input':
           out.push({ type: 'text', text });
           id = null; // wait for the user to type
+          break;
+        case 'template':
+          out.push({
+            type: 'template',
+            name: node.name,
+            language: node.language,
+            params: (node.params || []).map((p) => fill(p, session.vars)),
+          });
+          id = node.next;
           break;
         case 'buttons':
           out.push({

@@ -9,6 +9,7 @@
   },
   "scripts": {
     "start": "node src/server.js",
+    "builder": "node builder/server.js",
     "chat": "node scripts/chat.js",
     "check": "node scripts/check-flow.js"
   },

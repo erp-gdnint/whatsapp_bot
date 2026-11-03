@@ -18,6 +18,10 @@ let lastOptions = [];
 function print(messages) {
   if (messages.length) lastOptions = []; // a plain text question means numbers are typed, not taps
   for (const m of messages) {
+    if (m.type === 'template') {
+      console.log(`\n\x1b[32mBOT:\x1b[0m [template "${m.name}" (${m.language})] ${m.params.join(' | ')}`);
+      continue;
+    }
     console.log('\n\x1b[32mBOT:\x1b[0m ' + m.text.replace(/\n/g, '\n     '));
     if (m.type === 'buttons' || m.type === 'list') {
       if (m.type === 'list') console.log(`     [${m.button}]`);

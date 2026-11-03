@@ -57,6 +57,18 @@ function createWhatsAppClient({ token, phoneNumberId, version = 'v23.0', logger 
             },
           },
         };
+      case 'template':
+        return {
+          ...base,
+          type: 'template',
+          template: {
+            name: msg.name,
+            language: { code: msg.language },
+            ...(msg.params && msg.params.length
+              ? { components: [{ type: 'body', parameters: msg.params.map((text) => ({ type: 'text', text })) }] }
+              : {}),
+          },
+        };
       default:
         throw new Error(`Unknown outgoing message type "${msg.type}"`);
     }

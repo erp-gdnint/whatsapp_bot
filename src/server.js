@@ -1,5 +1,6 @@
 require('dotenv').config();
 const crypto = require('crypto');
+const fs = require('fs');
 const express = require('express');
 const { loadFlow } = require('./flow');
 const { FlowEngine } = require('./engine');
@@ -16,7 +17,8 @@ for (const key of ['WHATSAPP_TOKEN', 'PHONE_NUMBER_ID', 'VERIFY_TOKEN']) {
 }
 if (!env.APP_SECRET) console.warn('APP_SECRET not set: webhook signatures are NOT being checked.');
 
-const flow = loadFlow(env.FLOW_FILE || 'flows/faq.json', actions);
+const flowFile = env.FLOW_FILE || 'flows/faq.json';
+let flow = loadFlow(flowFile, actions);
 const engine = new FlowEngine({
   flow,
   actions,
@@ -26,6 +28,18 @@ const wa = createWhatsAppClient({
   token: env.WHATSAPP_TOKEN,
   phoneNumberId: env.PHONE_NUMBER_ID,
   version: env.GRAPH_API_VERSION || 'v23.0',
+});
+
+// Reload the flow when the file changes (e.g. saved from the visual builder).
+// An invalid file is ignored and the bot keeps running the last good flow.
+fs.watchFile(flowFile, { interval: 1000 }, () => {
+  try {
+    flow = loadFlow(flowFile, actions);
+    engine.setFlow(flow);
+    console.log(`Flow reloaded from ${flowFile}`);
+  } catch (err) {
+    console.error(`Flow NOT reloaded, keeping the previous one:\n${err.message}`);
+  }
 });
 
 const mask = (phone) => `***${String(phone).slice(-4)}`;

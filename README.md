@@ -42,7 +42,24 @@ User's WhatsApp  ──tap──▶  Meta Cloud API  ──webhook──▶  thi
    - Click **Verify and save**, then **Manage** and subscribe to **messages**.
 10. From one of the 5 registered phones, send `hi` to the test number.
 
-## 3. Edit the bot (flows/faq.json)
+## 3. Edit the bot
+
+### Visual builder (recommended)
+
+```
+npm run builder
+```
+
+Then open http://localhost:3100. The builder listens on your own computer only, so the tunnel never exposes it.
+
+- **Canvas:** each card is a node. Drag a card to move it. Drag from a ● dot onto another card to connect them, or drop on empty space to create a new node there.
+- **Right panel:** click a card to edit its text, options, type, or links. Click empty canvas to edit flow settings: start node, keywords, and the bot's fallback messages.
+- **Preview:** a WhatsApp-style chat on the right runs your *unsaved* flow. Type `hi` and tap the buttons. The card the chat is on is marked "preview here".
+- **Validation:** the status pill shows problems live, such as too many buttons, titles that are too long, or broken links. Save refuses an invalid flow, so the file the bot reads is always valid.
+- **Save (Ctrl+S):** writes `flows/<name>.json` and keeps the previous version in `flows/.backup/`. A running bot reloads the file automatically; no restart needed.
+- **Links to start:** "Main menu" links to the start node are hidden to keep the canvas readable. Select a node, or tick *Show links to start*, to see them.
+
+### Flow JSON reference
 
 Every screen is a node, and each option's `id` is the name of the next node.
 
@@ -53,6 +70,9 @@ Every screen is a node, and each option's `id` is the name of the next node.
 | `message` | Plain text, then continues automatically | `text`, `next` |
 | `input` | Asks the user to type something | `text`, `saveAs`, `next`, optional `minLength`, `errorText` |
 | `action` | Runs code (API call, database, sheet) | `action`, `next`, optional `onError`, `params` |
+| `template` | Sends a pre-approved WhatsApp template, then continues | `name`, `language` (e.g. `en_US`), `next`, optional `params` (body `{{1}}`, `{{2}}`…) |
+
+Templates are created and approved in *WhatsApp Manager > Message templates*. You only need them to message a user outside the 24-hour window. Inside the window, normal buttons, lists, and text are free-form and need no approval.
 
 - `keywords` lists words that jump to a node from anywhere, for example `menu` and `hi`.
 - `{{name}}` in any text inserts a saved value, for example `{{question}}`, or `{{ticketId}}` returned by an action.
@@ -84,7 +104,9 @@ To scale beyond a demo:
 ## Project layout
 
 ```
-flows/faq.json         the conversation (edit this)
+flows/faq.json         the conversation (edit in the builder or by hand)
+builder/server.js      visual builder API (localhost only): load, validate, save, preview
+builder/public/        builder UI (plain HTML/CSS/JS, no build step)
 src/server.js          webhook: verifies Meta's signature, dedupes retries, sends replies
 src/engine.js          flow engine (no WhatsApp code; easy to test)
 src/whatsapp.js        Cloud API client + webhook parser

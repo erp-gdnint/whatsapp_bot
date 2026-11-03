@@ -13,7 +13,7 @@ const LIMITS = {
   sectionTitle: 24,
 };
 
-const TYPES = ['message', 'buttons', 'list', 'input', 'action'];
+const TYPES = ['message', 'buttons', 'list', 'input', 'action', 'template'];
 
 function validateFlow(flow, actions = {}) {
   const errors = [];
@@ -53,6 +53,14 @@ function validateFlow(flow, actions = {}) {
         if (!actions[node.action]) errors.push(`${at}: action "${node.action}" is not in src/actions`);
         ref(`${at} next`, node.next);
         if (node.onError) ref(`${at} onError`, node.onError);
+        break;
+      case 'template':
+        // A pre-approved WhatsApp message template (created in WhatsApp Manager).
+        if (!/^[a-z0-9_]+$/.test(node.name || ''))
+          errors.push(`${at}: template "name" must be the approved template name (lowercase, digits, _)`);
+        if (!node.language) errors.push(`${at}: template needs "language", e.g. "en_US" or "en"`);
+        if (node.params && !Array.isArray(node.params)) errors.push(`${at}: "params" must be a list of texts`);
+        ref(`${at} next`, node.next);
         break;
       case 'buttons':
       case 'list': {

@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Flow Builder</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <div class="brand">Flow Builder</div>
+    <select id="fileSel" title="Flow file"></select>
+    <button id="newFlowBtn" class="secondary">New flow</button>
+    <span class="sep"></span>
+    <button id="addNodeBtn">+ Node</button>
+    <button id="layoutBtn" class="secondary">Auto layout</button>
+    <label class="toggle"><input type="checkbox" id="showStartLinks"> Show links to start</label>
+    <span class="grow"></span>
+    <button id="statusPill" class="pill">…</button>
+    <button id="previewBtn" class="secondary">Preview</button>
+    <button id="saveBtn">Save</button>
+  </header>
+
+  <main>
+    <section id="canvas">
+      <div id="world">
+        <svg id="edges">
+          <defs>
+            <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M0 0L10 5L0 10z" fill="#94a3b8"/>
+            </marker>
+            <marker id="arrow-hl" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M0 0L10 5L0 10z" fill="#7c3aed"/>
+            </marker>
+          </defs>
+        </svg>
+      </div>
+    </section>
+
+    <aside id="inspector"></aside>
+
+    <aside id="preview">
+      <div class="phone-head">
+        <div><b>Preview</b><small>runs your unsaved flow</small></div>
+        <button id="resetPreviewBtn" class="secondary small">Restart</button>
+      </div>
+      <div id="chat"></div>
+      <form id="chatForm" autocomplete="off">
+        <input id="chatInput" placeholder="Type a message">
+        <button>Send</button>
+      </form>
+    </aside>
+  </main>
+
+  <div id="toast"></div>
+  <script src="app.js"></script>
+</body>
+</html>
