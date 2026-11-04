@@ -17,7 +17,7 @@
   "nodes": {
     "main": {
       "type": "list",
-      "text": "👋 Welcome to *Demo Company*!\nHow can we help you today? Tap *View topics* to choose.",
+      "text": "Welcome to *Global Development Network*!\nHow can we help you today? Tap *View topics* to choose.",
       "button": "View topics",
       "sectionTitle": "Topics",
       "options": [
@@ -32,7 +32,7 @@
 
     "callback_phone": {
       "type": "input",
-      "text": "📞 Sure {{contact_name}}! Which number should we call?\nType it with country code, e.g. +91 98765 43210.",
+      "text": "Sure {{contact_name}}! Which number should we call?\nType it with country code, e.g. +91 98765 43210.",
       "validate": "phone",
       "saveAs": "callback_phone",
       "next": "callback_date"
@@ -40,7 +40,7 @@
 
     "callback_date": {
       "type": "input",
-      "text": "📅 On which date? Type it like 25/12/2026.",
+      "text": "On which date? Type it like 25/12/2026.",
       "validate": "date",
       "saveAs": "callback_date",
       "next": "callback_done"
@@ -48,7 +48,7 @@
 
     "callback_done": {
       "type": "buttons",
-      "text": "✅ Thanks {{contact_name}}! We will call *{{callback_phone}}* on *{{callback_date}}*.",
+      "text": "Thanks {{contact_name}}! We will call *{{callback_phone}}* on *{{callback_date}}*.",
       "options": [
         { "id": "main", "title": "Main menu" }
       ]
@@ -56,7 +56,7 @@
 
     "about": {
       "type": "buttons",
-      "text": "*About us*\nDemo Company helps small businesses manage orders and customers. We have served 500+ clients since 2015.",
+      "text": "*About us*\nGDN  helps small businesses manage orders and customers. We have served 500+ clients since 2015.",
       "options": [
         { "id": "main", "title": "Main menu" },
         { "id": "ask", "title": "Ask a question" }
@@ -113,7 +113,7 @@
 
     "ask": {
       "type": "input",
-      "text": "✍️ Please type your question in one message.\n(Type *menu* to go back.)",
+      "text": "Please type your question in one message.\n(Type *menu* to go back.)",
       "saveAs": "question",
       "minLength": 5,
       "errorText": "Please type a bit more (at least 5 characters).",
@@ -128,7 +128,7 @@
 
     "ask_done": {
       "type": "buttons",
-      "text": "✅ Thanks! We saved your question.\nReference: *{{ticketId}}*\nOur team will reply here soon.",
+      "text": "Thanks! We saved your question.\nReference: *{{ticketId}}*\nOur team will reply here soon.",
       "options": [
         { "id": "main", "title": "Main menu" }
       ]
