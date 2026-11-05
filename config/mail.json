@@ -1,0 +1,14 @@
+{
+  "_help": "Settings for the sendMail action. The bot POSTs 'payload' as JSON to 'url' (your Frappe whitelisted method). Leave 'url' empty to only save payloads to data/outbox.jsonl. Placeholders: {{to}} {{subject}} {{message}} {{reply_to}} from the node's params, {{user_phone}}, and any saved value like {{contact_name}} or {{question}}. Empty values are left out. API key/secret go in .env (FRAPPE_API_KEY, FRAPPE_API_SECRET). Changes apply on the next mail; no restart needed.",
+  "url": "https://app.gdn.int/api/method/bot_mail",
+  "defaultTo": "rkumar@gdn.int",
+  "timeoutMs": 10000,
+  "payload": {
+    "recipients": "{{to}}",
+    "subject": "{{subject}}",
+    "message": "{{message}}",
+    "reply_to": "{{reply_to}}",
+    "whatsapp_number": "{{user_phone}}",
+    "contact_name": "{{contact_name}}"
+  }
+}

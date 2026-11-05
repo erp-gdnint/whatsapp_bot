@@ -86,6 +86,30 @@ Templates are created and approved in *WhatsApp Manager > Message templates*. Yo
 
 Add a function in [src/actions/index.js](src/actions/index.js) and call it from a node such as `{ "type": "action", "action": "checkOrderStatus", "next": "show_status" }`. Whatever the function returns becomes available as `{{fields}}` in later messages. `saveQuestion` in that file shows the pattern, with a commented example of a real HTTP API call.
 
+**Sending email.** The bot does not send mail itself. The `sendMail` action POSTs a JSON payload to your Frappe whitelisted method, and Frappe sends the email:
+
+```json
+{ "type": "action", "action": "sendMail",
+  "params": { "to": "sales@example.com", "subject": "Question from {{contact_name}}", "message": "{{question}}" },
+  "next": "ask_done", "onError": "ask_done" }
+```
+
+Settings are in [config/mail.json](config/mail.json) and apply without a restart:
+- `url`: the method, e.g. `https://erp.example.com/api/method/myapp.api.send_bot_mail`. Leave it empty to only save payloads to `data/outbox.jsonl` (handy in the simulator).
+- `defaultTo`: the recipient when a node has no `to`.
+- `payload`: the JSON keys your Frappe function receives. Placeholders are the node's params (`{{to}}`, `{{subject}}`, `{{message}}`, `{{reply_to}}`, or any param you add), `{{user_phone}}`, and saved values such as `{{contact_name}}`. Empty values are left out.
+
+Put `FRAPPE_API_KEY` and `FRAPPE_API_SECRET` in `.env`; they are sent as `Authorization: token key:secret`. After the call, `{{mailResult}}` holds the method's return value if it is text. A matching Frappe method:
+
+```python
+@frappe.whitelist()
+def send_bot_mail(recipients, subject, message, reply_to=None, whatsapp_number=None, contact_name=None):
+    frappe.sendmail(recipients=recipients, subject=subject, message=message.replace("\n", "<br>"), reply_to=reply_to)
+    return "queued"
+```
+
+Check the setup with `npm run test-mail` (or `npm run test-mail -- you@example.com`). With an empty `url`, it prints the payload instead of sending.
+
 To scale beyond a demo:
 - Replace `MemoryStore` in [src/store.js](src/store.js) with a Redis or Postgres store that has the same `get`, `set` and `delete` methods.
 - Run several flows by pointing `FLOW_FILE` at another JSON file.
@@ -114,7 +138,8 @@ builder/public/        builder UI (plain HTML/CSS/JS, no build step)
 src/server.js          webhook: verifies Meta's signature, dedupes retries, sends replies
 src/engine.js          flow engine (no WhatsApp code; easy to test)
 src/whatsapp.js        Cloud API client + webhook parser
-src/actions/index.js   your custom code / API calls
+src/actions/index.js   your custom code / API calls (incl. sendMail)
+config/mail.json       Frappe mail method URL and payload shape
 src/store.js           per-user session store (swap for Redis to scale)
 src/validate.js        checks flows against WhatsApp limits
 scripts/chat.js        terminal simulator

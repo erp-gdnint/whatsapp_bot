@@ -11,7 +11,8 @@
     "start": "node src/server.js",
     "builder": "node builder/server.js",
     "chat": "node scripts/chat.js",
-    "check": "node scripts/check-flow.js"
+    "check": "node scripts/check-flow.js",
+    "test-mail": "node scripts/test-mail.js"
   },
   "dependencies": {
     "dotenv": "^16.4.5",

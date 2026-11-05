@@ -21,15 +21,48 @@
       "button": "View topics",
       "sectionTitle": "Topics",
       "options": [
-        { "id": "about", "title": "About us", "description": "Who we are and what we do" },
-        { "id": "hours", "title": "Business hours", "description": "When we are open" },
-        { "id": "pricing", "title": "Pricing & plans", "description": "Our plans and what they include" },
-        { "id": "contact", "title": "Contact & location", "description": "Phone, email and address" },
-        { "id": "ask", "title": "Ask a question", "description": "Type your question and our team will reply" },
-        { "id": "callback_phone", "title": "Request a callback", "description": "We call you back on a day you choose" }
+        {
+          "id": "about",
+          "title": "About us",
+          "description": "Who we are and what we do"
+        },
+        {
+          "id": "contact",
+          "title": "Contact & location",
+          "description": "Phone, email and address"
+        },
+        {
+          "id": "ask",
+          "title": "Ask a question",
+          "description": "Type your question and our team will reply"
+        },
+        {
+          "id": "callback_phone",
+          "title": "Request a callback",
+          "description": "We call you back on a day you choose"
+        },
+        {
+          "id": "gdn_conference",
+          "title": "Gdn conference",
+          "description": "Global Development Network Conference Tokyo 2026"
+        },
+        {
+          "id": "travel_desk",
+          "title": "Travel Desk",
+          "description": "Help with tickets, flights and travel-related queries"
+        },
+        {
+          "id": "finance_team",
+          "title": "Finance Team",
+          "description": "Help regarding conference reimbursements"
+        },
+        {
+          "id": "logistics_team",
+          "title": "Logistics Team",
+          "description": "Help regarding hotel accommodation and local travel"
+        }
       ]
     },
-
     "callback_phone": {
       "type": "input",
       "text": "Sure {{contact_name}}! Which number should we call?\nType it with country code, e.g. +91 98765 43210.",
@@ -37,7 +70,6 @@
       "saveAs": "callback_phone",
       "next": "callback_date"
     },
-
     "callback_date": {
       "type": "input",
       "text": "On which date? Type it like 25/12/2026.",
@@ -45,72 +77,44 @@
       "saveAs": "callback_date",
       "next": "callback_done"
     },
-
     "callback_done": {
       "type": "buttons",
       "text": "Thanks {{contact_name}}! We will call *{{callback_phone}}* on *{{callback_date}}*.",
       "options": [
-        { "id": "main", "title": "Main menu" }
+        {
+          "id": "main",
+          "title": "Main menu"
+        }
       ]
     },
-
     "about": {
       "type": "buttons",
-      "text": "*About us*\nGDN  helps small businesses manage orders and customers. We have served 500+ clients since 2015.",
+      "text": "*About us*\nThe *Global Development Network (GDN)* is a public international organisation that supports high-quality, policy-oriented social science research in Low- and Middle-Income Countries (LMICs) to promote better lives. We promote research on the premise that contextualised and locally driven research leads to more informed policies, increased policy ownership, better-informed implementation, and more sustainable and inclusive development choices. We also enable research capacity strengthening across countries and disciplines.\n\nFounded in 1999, GDN is currently headquartered in New Delhi, with a presence in Clermont-Ferrand, France and Washington D.C., United States.\n\nRepresentatives of Colombia, Egypt, India, Italy, Senegal and Sri Lanka signed an agreement establishing the Global Development Network. Download the full Charter.\nThe GDN International Assembly comprises six sovereign states - Colombia, Hungary, India, Spain, Sri Lanka and Fiji.",
       "options": [
-        { "id": "main", "title": "Main menu" },
-        { "id": "ask", "title": "Ask a question" }
+        {
+          "id": "main",
+          "title": "Main menu"
+        },
+        {
+          "id": "ask",
+          "title": "Ask a question"
+        }
       ]
     },
-
-    "hours": {
-      "type": "buttons",
-      "text": "*Business hours*\nMon–Fri: 9:30 am – 6:30 pm\nSat: 10:00 am – 2:00 pm\nSun: closed",
-      "options": [
-        { "id": "main", "title": "Main menu" },
-        { "id": "contact", "title": "Contact us" }
-      ]
-    },
-
-    "pricing": {
-      "type": "buttons",
-      "text": "*Pricing & plans*\nWe have two plans. Which one would you like to know about?",
-      "options": [
-        { "id": "plan_basic", "title": "Basic plan" },
-        { "id": "plan_pro", "title": "Pro plan" },
-        { "id": "main", "title": "Main menu" }
-      ]
-    },
-
-    "plan_basic": {
-      "type": "buttons",
-      "text": "*Basic plan* – ₹499/month\n• 1 user\n• Up to 100 orders a month\n• Email support",
-      "options": [
-        { "id": "pricing", "title": "Back to plans" },
-        { "id": "ask", "title": "Ask a question" },
-        { "id": "main", "title": "Main menu" }
-      ]
-    },
-
-    "plan_pro": {
-      "type": "buttons",
-      "text": "*Pro plan* – ₹1,499/month\n• 5 users\n• Unlimited orders\n• Phone and WhatsApp support",
-      "options": [
-        { "id": "pricing", "title": "Back to plans" },
-        { "id": "ask", "title": "Ask a question" },
-        { "id": "main", "title": "Main menu" }
-      ]
-    },
-
     "contact": {
       "type": "buttons",
       "text": "*Contact & location*\n📞 +91 00000 00000\n✉️ hello@example.com\n📍 Sample Street, Bengaluru",
       "options": [
-        { "id": "main", "title": "Main menu" },
-        { "id": "ask", "title": "Ask a question" }
+        {
+          "id": "main",
+          "title": "Main menu"
+        },
+        {
+          "id": "ask",
+          "title": "Ask a question"
+        }
       ]
     },
-
     "ask": {
       "type": "input",
       "text": "Please type your question in one message.\n(Type *menu* to go back.)",
@@ -119,19 +123,183 @@
       "errorText": "Please type a bit more (at least 5 characters).",
       "next": "ask_save"
     },
-
     "ask_save": {
       "type": "action",
       "action": "saveQuestion",
-      "next": "ask_done"
+      "next": "ask_mail"
     },
-
+    "ask_mail": {
+      "type": "action",
+      "action": "sendMail",
+      "params": {
+        "subject": "WhatsApp question {{ticketId}} from {{contact_name}}",
+        "message": "A new question came in on the WhatsApp bot.\n\nReference: {{ticketId}}\nName: {{contact_name}}\nWhatsApp: +{{user_phone}}\n\nQuestion:\n{{question}}"
+      },
+      "next": "ask_done",
+      "onError": "ask_done"
+    },
     "ask_done": {
       "type": "buttons",
       "text": "Thanks! We saved your question.\nReference: *{{ticketId}}*\nOur team will reply here soon.",
       "options": [
+        {
+          "id": "main",
+          "title": "Main menu"
+        }
+      ]
+    },
+    "gdn_conference": {
+      "type": "buttons",
+      "text": "_https://conf2026.gdn.int_\n\n`Global Development Network Conference Tokyo 2026`\n\n",
+      "options": [
+        {
+          "id": "main",
+          "title": "Main menu"
+        }
+      ]
+    },
+    "travel_desk": {
+      "type": "input",
+      "text": "*Connect with Travel Desk*\nHelp with tickets, flights and travel-related queries.\n\nPlease type your query in one message.\n(Type *menu* to go back.)",
+      "saveAs": "query",
+      "minLength": 5,
+      "errorText": "Please type a bit more (at least 5 characters).",
+      "next": "travel_ticket"
+    },
+    "travel_ticket": {
+      "type": "action",
+      "action": "createTicket",
+      "params": { "type": "travel", "team": "Travel Desk", "field": "query" },
+      "next": "travel_mail"
+    },
+    "travel_mail": {
+      "type": "action",
+      "action": "sendMail",
+      "params": {
+        "to": "rkumar@gdn.int",
+        "subject": "WhatsApp travel query {{ticketId}} from {{contact_name}}",
+        "message": "A travel query came in on the WhatsApp bot.\n\nReference: {{ticketId}}\nType: {{ticketType}}\nName: {{contact_name}}\nWhatsApp: +{{user_phone}}\n\nQuery:\n{{query}}"
+      },
+      "next": "ticket_done",
+      "onError": "ticket_done"
+    },
+    "finance_team": {
+      "type": "input",
+      "text": "*Connect with the Finance Team*\nHelp regarding conference reimbursements.\n\nPlease type your query in one message.\n(Type *menu* to go back.)",
+      "saveAs": "query",
+      "minLength": 5,
+      "errorText": "Please type a bit more (at least 5 characters).",
+      "next": "finance_ticket"
+    },
+    "finance_ticket": {
+      "type": "action",
+      "action": "createTicket",
+      "params": { "type": "finance", "team": "Finance Team", "field": "query" },
+      "next": "finance_mail"
+    },
+    "finance_mail": {
+      "type": "action",
+      "action": "sendMail",
+      "params": {
+        "to": "rkumar@gdn.int",
+        "subject": "WhatsApp finance query {{ticketId}} from {{contact_name}}",
+        "message": "A finance query came in on the WhatsApp bot.\n\nReference: {{ticketId}}\nType: {{ticketType}}\nName: {{contact_name}}\nWhatsApp: +{{user_phone}}\n\nQuery:\n{{query}}"
+      },
+      "next": "ticket_done",
+      "onError": "ticket_done"
+    },
+    "logistics_team": {
+      "type": "input",
+      "text": "*Connect with the Logistics Team*\nHelp regarding hotel accommodation and local travel.\n\nPlease type your query in one message.\n(Type *menu* to go back.)",
+      "saveAs": "query",
+      "minLength": 5,
+      "errorText": "Please type a bit more (at least 5 characters).",
+      "next": "logistics_ticket"
+    },
+    "logistics_ticket": {
+      "type": "action",
+      "action": "createTicket",
+      "params": { "type": "logistics", "team": "Logistics Team", "field": "query" },
+      "next": "logistics_mail"
+    },
+    "logistics_mail": {
+      "type": "action",
+      "action": "sendMail",
+      "params": {
+        "to": "rkumar@gdn.int",
+        "subject": "WhatsApp logistics query {{ticketId}} from {{contact_name}}",
+        "message": "A logistics query came in on the WhatsApp bot.\n\nReference: {{ticketId}}\nType: {{ticketType}}\nName: {{contact_name}}\nWhatsApp: +{{user_phone}}\n\nQuery:\n{{query}}"
+      },
+      "next": "ticket_done",
+      "onError": "ticket_done"
+    },
+    "ticket_done": {
+      "type": "buttons",
+      "text": "Thanks {{contact_name}}! Your query has been sent to the *{{ticketTeam}}*.\nReference: *{{ticketId}}*\nThey will get back to you soon.",
+      "options": [
         { "id": "main", "title": "Main menu" }
       ]
+    }
+  },
+  "ui": {
+    "positions": {
+      "main": {
+        "x": 30,
+        "y": 30
+      },
+      "callback_phone": {
+        "x": 320,
+        "y": 30
+      },
+      "about": {
+        "x": 320,
+        "y": 179
+      },
+      "contact": {
+        "x": 320,
+        "y": 387
+      },
+      "ask": {
+        "x": 320,
+        "y": 595
+      },
+      "callback_date": {
+        "x": 610,
+        "y": 30
+      },
+      "ask_save": {
+        "x": 610,
+        "y": 168
+      },
+      "callback_done": {
+        "x": 900,
+        "y": 30
+      },
+      "ask_done": {
+        "x": 1190,
+        "y": 30
+      },
+      "gdn_conference": {
+        "x": 320,
+        "y": 744
+      },
+      "travel_desk": {
+        "x": 320,
+        "y": 923
+      },
+      "ask_mail": {
+        "x": 900,
+        "y": 209
+      },
+      "travel_ticket": { "x": 610, "y": 923 },
+      "travel_mail": { "x": 900, "y": 923 },
+      "finance_team": { "x": 320, "y": 1100 },
+      "finance_ticket": { "x": 610, "y": 1100 },
+      "finance_mail": { "x": 900, "y": 1100 },
+      "logistics_team": { "x": 320, "y": 1277 },
+      "logistics_ticket": { "x": 610, "y": 1277 },
+      "logistics_mail": { "x": 900, "y": 1277 },
+      "ticket_done": { "x": 1190, "y": 1100 }
     }
   }
 }
