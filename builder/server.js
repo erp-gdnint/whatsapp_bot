@@ -3,6 +3,7 @@
 // It listens on 127.0.0.1 only, so it is never reachable through the bot's tunnel.
 
 require('dotenv').config();
+process.env.DRY_RUN = '1'; // the preview chat must never create real tickets
 const express = require('express');
 const fs = require('fs/promises');
 const path = require('path');

@@ -12,6 +12,7 @@ const INPUT_KINDS = {
   phone: 'Phone number',
   number: 'Number',
   date: 'Date (saved as YYYY-MM-DD)',
+  time: 'Time (saved as HH:MM:SS)',
 };
 
 const TYPE_INFO = {
@@ -19,7 +20,7 @@ const TYPE_INFO = {
   buttons: { label: 'Buttons', short: 'BUTTONS', hint: 'Up to 10 buttons, sent 3 per message' },
   message: { label: 'Message', short: 'MESSAGE', hint: 'Plain text, then continues' },
   media: { label: 'Image / video / document', short: 'MEDIA', hint: 'Sends a file from a public link' },
-  input: { label: 'Text input', short: 'INPUT', hint: 'Asks for text, email, phone, number or date' },
+  input: { label: 'Text input', short: 'INPUT', hint: 'Asks for text, email, phone, number, date or time' },
   action: { label: 'Action (code / API)', short: 'ACTION', hint: 'Runs a function from src/actions' },
   template: { label: 'WhatsApp template', short: 'TEMPLATE', hint: 'Sends a pre-approved template' },
 };
@@ -571,11 +572,12 @@ function nodePanel(id) {
       break;
     }
     case 'action':
-      els.push(field('Action', h('select', { value: node.action, onchange: (e) => { node.action = e.target.value; markChanged(); } },
+      els.push(field('Action', h('select', { value: node.action, onchange: (e) => { node.action = e.target.value; markChanged({ inspector: true }); } },
         !S.actions.includes(node.action) ? h('option', { value: node.action || '' }, node.action ? `${node.action} (missing!)` : '— choose —') : null,
         S.actions.map((a) => h('option', { value: a }, a))),
       'Functions in src/actions/index.js. Their returned fields become {{fields}}.'));
-      els.push(field('Params (JSON, optional)', paramsEditor(node), 'Passed to the action as params.'));
+      if (node.action === 'setTicket') els.push(...ticketFields(node));
+      else els.push(field('Params (JSON, optional)', paramsEditor(node), 'Passed to the action as params.'));
       els.push(field('Then go to', targetSelect(node.next, (v) => { node.next = v; })));
       els.push(field('If it fails, go to (optional)', targetSelect(node.onError, (v) => { if (v) node.onError = v; else delete node.onError; }, true)));
       break;
@@ -591,6 +593,29 @@ function nodePanel(id) {
   }
   els.push(h('hr'), h('button', { class: 'danger', onclick: () => deleteNode(id) }, 'Delete node'));
   return els;
+}
+
+// Desk and Type for a setTicket node. Each field offers suggestions and also accepts typed text.
+function ticketFields(node) {
+  const params = node.params || (node.params = {});
+  const combo = (key, defaults, placeholder) => {
+    const used = Object.values(S.flow.nodes).filter((n) => n.action === 'setTicket' && n.params && n.params[key]);
+    const values = [...new Set([...defaults, ...used.map((n) => n.params[key])])];
+    const id = `ticket-${key}-options`;
+    return h('div', null,
+      h('input', { type: 'text', list: id, value: params[key] ?? '', placeholder, oninput: (e) => {
+        const v = e.target.value.trim();
+        if (v) params[key] = v; else delete params[key];
+        markChanged();
+      } }),
+      h('datalist', { id }, values.map((v) => h('option', { value: v }))));
+  };
+  return [
+    field('Desk', combo('desk', ['WA-Ticket', 'WA-Travel', 'WA-Finance', 'WA-Logistic'], 'Pick or type, e.g. WA-Visa'),
+      'Must match a WhatsApp Desk in Frappe. An unknown desk falls back to WA-Ticket.'),
+    field('Type', combo('type', ['Query', 'Complaint', 'Callback', 'Other'], 'Pick or type'),
+      'Optional. A node can set the desk, the type, or both.'),
+  ];
 }
 
 function paramsEditor(node) {
@@ -846,7 +871,7 @@ async function resetPreview() {
   S.liveNode = null;
   world.querySelectorAll('.card.live').forEach((c) => c.classList.remove('live'));
   await api('POST', '/api/preview/reset', { sessionId }).catch(() => {});
-  bubble('sys', 'Type "hi" to start chatting with your flow. Actions really run here (e.g. saveQuestion writes to data/).');
+  bubble('sys', 'Type "hi" to start chatting with your flow. Tickets are not sent to Frappe from this preview.');
 }
 
 // ---------- wiring ----------

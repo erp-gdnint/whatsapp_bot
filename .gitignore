@@ -5,3 +5,5 @@ flows/.backup/
 .env.bkp
 .env.prod
 docs/
+
+frappe-side/

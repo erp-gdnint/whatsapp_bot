@@ -81,6 +81,12 @@ function createWhatsAppClient({ token, phoneNumberId, version = 'v23.0', logger 
     }
   }
 
+  // Sends one message and returns Meta's message ID. This means accepted, not yet delivered.
+  async function send(to, msg) {
+    const result = await post(toPayload(to, msg));
+    return result.messages && result.messages[0] && result.messages[0].id;
+  }
+
   // Sends messages one by one so they arrive in order.
   async function sendAll(to, messages) {
     for (const msg of messages) await post(toPayload(to, msg));
@@ -95,7 +101,7 @@ function createWhatsAppClient({ token, phoneNumberId, version = 'v23.0', logger 
     }
   }
 
-  return { sendAll, markRead, toPayload };
+  return { send, sendAll, markRead, toPayload };
 }
 
 // Pulls user messages out of a webhook body, with the sender's WhatsApp profile name.

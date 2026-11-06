@@ -12,11 +12,12 @@ const LIMITS = {
   listButton: 20,
   sectionTitle: 24,
   caption: 1024,
+  ticketType: 40,
   sessionTimeoutMinutes: 1440, // WhatsApp's customer service window is 24 hours
 };
 
 const TYPES = ['message', 'buttons', 'list', 'input', 'action', 'template', 'media'];
-const INPUT_KINDS = ['text', 'email', 'phone', 'number', 'date'];
+const INPUT_KINDS = ['text', 'email', 'phone', 'number', 'date', 'time'];
 const MEDIA_TYPES = ['image', 'video', 'document'];
 
 function validateFlow(flow, actions = {}) {
@@ -71,6 +72,15 @@ function validateFlow(flow, actions = {}) {
         if (!actions[node.action]) errors.push(`${at}: action "${node.action}" is not in src/actions`);
         ref(`${at} next`, node.next);
         if (node.onError) ref(`${at} onError`, node.onError);
+        if (node.action === 'setTicket') {
+          const { desk, type } = node.params || {};
+          if (!desk && !type) errors.push(`${at}: setTicket needs a desk, a type, or both`);
+          // The desk becomes part of the ticket ID, so it must be a clean code.
+          if (desk && !/^WA-[A-Za-z0-9-]{1,50}$/.test(desk))
+            errors.push(`${at}: desk must look like WA-Travel (WA- then letters, digits or hyphens)`);
+          if (type && String(type).length > LIMITS.ticketType)
+            errors.push(`${at}: type is over ${LIMITS.ticketType} chars`);
+        }
         break;
       case 'template':
         // A pre-approved WhatsApp message template (created in WhatsApp Manager).

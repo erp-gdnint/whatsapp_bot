@@ -31,7 +31,7 @@ User's WhatsApp  ──tap──▶  Meta Cloud API  ──webhook──▶  thi
    - **Assign assets**: your app (full control) and your WhatsApp account (full control).
    - **Generate token**: choose your app, tick `whatsapp_business_messaging` and `whatsapp_business_management`, and set expiry to *Never*.
 5. Copy the **App secret** from **App settings > Basic**.
-6. Copy `.env.example` to `.env` and fill in `WHATSAPP_TOKEN`, `PHONE_NUMBER_ID`, `APP_SECRET`, and a `VERIFY_TOKEN` of your choice.
+6. Copy `.env.example` to `.env` and fill in `WHATSAPP_TOKEN`, `PHONE_NUMBER_ID`, `APP_SECRET`, a `VERIFY_TOKEN` of your choice, and `FRAPPE_TO_BOT_TOKEN`. The server refuses to start without them.
 7. Start the server: `npm start`
 8. Give it a public HTTPS URL:
    - Quick option: install ngrok and run `ngrok http 3000`, then use the `https://….ngrok-free.app` URL.
@@ -69,24 +69,43 @@ Every screen is a node, and each option's `id` is the name of the next node.
 | `buttons` | Up to 10 reply buttons. WhatsApp shows 3 per message, so the rest go in follow-up messages | `text`, `options[{id,title≤20}]`, optional `moreText` (text above the extra buttons, default `…`) |
 | `message` | Plain text, then continues automatically | `text`, `next` |
 | `media` | Sends an image, video or document from a public `https://` link, then continues | `mediaType` (`image`/`video`/`document`), `url`, `next`, optional `caption`, `filename` |
-| `input` | Asks the user to type something; re-asks if the answer doesn't match | `text`, `saveAs`, `next`, optional `validate` (`text`/`email`/`phone`/`number`/`date`), `minLength`, `errorText` |
+| `input` | Asks the user to type something; re-asks if the answer doesn't match | `text`, `saveAs`, `next`, optional `validate` (`text`/`email`/`phone`/`number`/`date`/`time`), `minLength`, `errorText` |
 | `action` | Runs code (API call, database, sheet) | `action`, `next`, optional `onError`, `params` |
 | `template` | Sends a pre-approved WhatsApp template, then continues | `name`, `language` (e.g. `en_US`), `next`, optional `params` (body `{{1}}`, `{{2}}`…) |
 
 Templates are created and approved in *WhatsApp Manager > Message templates*. You only need them to message a user outside the 24-hour window. Inside the window, normal buttons, lists, and text are free-form and need no approval.
 
 - `keywords` lists words that jump to a node from anywhere, for example `menu` and `hi`.
-- `{{name}}` in any text inserts a saved value, for example `{{question}}`, or `{{ticketId}}` returned by an action.
+- `{{name}}` in any text inserts a saved value, for example `{{ticket_message}}`, or `{{reference_id}}` returned by an action.
 - `{{contact_name}}` (the user's WhatsApp profile name) and `{{contact_phone}}` are always available.
-- Input checks save a cleaned value: phone without spaces (`+919876543210`), number with a dot (`2.5`), date as `YYYY-MM-DD`, email in lowercase.
+- Input checks save a cleaned value: phone without spaces (`+919876543210`), number with a dot (`2.5`), date as `YYYY-MM-DD`, time as `HH:MM:SS`, email in lowercase.
 - Sessions expire after `settings.sessionTimeoutMinutes` in the flow (1–1440; set it in the builder's flow settings), otherwise after `SESSION_TTL_MINUTES` (default 30). After that, the next message starts again at `start`.
 - Media limits (WhatsApp): image JPG/PNG up to 5 MB, video MP4 up to 16 MB, document up to 100 MB. The link must download directly without a login; Google Drive "view" links don't work.
 
-## 4. Adding real APIs later
+## 4. Tickets in Frappe
 
-Add a function in [src/actions/index.js](src/actions/index.js) and call it from a node such as `{ "type": "action", "action": "checkOrderStatus", "next": "show_status" }`. Whatever the function returns becomes available as `{{fields}}` in later messages. `saveQuestion` in that file shows the pattern, with a commented example of a real HTTP API call.
+The bot saves tickets in Frappe. Frappe assigns a user, sends the email, and calls the bot to alert that user on WhatsApp. The Frappe code is in [frappe-side/wa_tickets.py](frappe-side/wa_tickets.py), and the full plan is in `docs/frappe-ticket-plan.md`.
 
-**Sending email.** The bot does not send mail itself. The `sendMail` action POSTs a JSON payload to your Frappe whitelisted method, and Frappe sends the email:
+**Raising a ticket.** The user taps *Raise a ticket*, picks a type, picks a desk, and types a message. Callbacks also ask for a phone, date and time. Each choice is a `setTicket` action node, where the builder lets you pick or type the Desk and Type. The `createRequest` action generates a random 10-digit reference ID and sends the ticket to `createRequestUrl` in [config/frappe.json](config/frappe.json), with `FRAPPE_TOKEN` in the payload.
+
+If Frappe cannot save a ticket, it is added to `data/failed-tickets.jsonl` and the user sees `ticket_failed`. **These tickets are not retried automatically, so check this file.** The builder preview and `npm run chat` never contact Frappe.
+
+**Sending WhatsApp from Frappe.** Call this from server-side Python only, so the token never reaches a browser:
+
+```
+POST /api/frappe/notify
+Authorization: Bearer <FRAPPE_TO_BOT_TOKEN>
+
+{ "to": "919876543210", "template": "ticket_assigned", "language": "en", "params": ["WA-Travel-4829103756", "Query", "Asha", "+919812345678", "Need help"] }
+```
+
+Use this for assigned users, because a template reaches people who never chatted with the bot. Templates must be listed in `allowedTemplates`. Sending `"text"` in place of `template` works only for people who messaged the bot in the last 24 hours. `to` can also be a list of up to 10 numbers. The API allows 60 sends a minute.
+
+## 5. Adding real APIs later
+
+Add a function in [src/actions/index.js](src/actions/index.js) and call it from a node such as `{ "type": "action", "action": "checkOrderStatus", "next": "show_status" }`. Whatever the function returns becomes available as `{{fields}}` in later messages. `createRequest` in that file shows the pattern for a real HTTP API call.
+
+**Sending email.** Frappe mails ticket assignees itself, so the flow no longer uses `sendMail`. It is kept for any other mail trigger. The bot does not send mail itself. The `sendMail` action POSTs a JSON payload to your Frappe whitelisted method, and Frappe sends the email:
 
 ```json
 { "type": "action", "action": "sendMail",
@@ -114,7 +133,7 @@ To scale beyond a demo:
 - Replace `MemoryStore` in [src/store.js](src/store.js) with a Redis or Postgres store that has the same `get`, `set` and `delete` methods.
 - Run several flows by pointing `FLOW_FILE` at another JSON file.
 
-## 5. Risks: read before the demo
+## 6. Risks: read before the demo
 
 | Risk | Why | What to do |
 | --- | --- | --- |
@@ -122,7 +141,7 @@ To scale beyond a demo:
 | Meta account restriction | Meta can restrict brand-new or fake Facebook accounts that create developer apps. | Use your real, established Facebook account and turn on 2-factor authentication. |
 | Token expiry | The API Setup token dies within about 24 hours and the bot goes silent. | Use the permanent System User token (step 2.4). |
 | Only 5 testers | The test number can message only the registered numbers. | Register the demo audience's phones in advance. |
-| Bot cannot message first | Outside a 24-hour window after the user's last message, only approved templates can be sent. | Not an issue for this bot, which always replies to the user. Just ask people to send `hi` first. |
+| Bot cannot message first | Outside a 24-hour window after the user's last message, only approved templates can be sent. | Replies to users are fine. Alerts to assigned users need the approved `ticket_assigned` template. |
 | Free hosting sleeps | Render's free tier sleeps after about 15 minutes idle, so the first reply can take 30–60 seconds. | Open the URL or send `hi` a few minutes before the demo. |
 | ngrok URL changes | A free ngrok URL changes on every restart. | Update the Callback URL in Meta after each restart, or use Render. |
 | Message costs (production) | From 1 Oct 2026, Meta gives 1,000 free service messages per number per month and charges after that. With no payment method, delivery stops; you are not charged. | No cost at demo scale. Budget for it in production. |
@@ -138,7 +157,11 @@ builder/public/        builder UI (plain HTML/CSS/JS, no build step)
 src/server.js          webhook: verifies Meta's signature, dedupes retries, sends replies
 src/engine.js          flow engine (no WhatsApp code; easy to test)
 src/whatsapp.js        Cloud API client + webhook parser
-src/actions/index.js   your custom code / API calls (incl. sendMail)
+src/actions/index.js   your custom code / API calls (tickets, sendMail)
+src/frappe.js          client for calling Frappe
+src/frappe-api.js      API Frappe calls to send WhatsApp messages
+src/clean.js           cleans user text before it leaves the bot
+config/frappe.json     Frappe ticket method URL and allowed templates
 config/mail.json       Frappe mail method URL and payload shape
 src/store.js           per-user session store (swap for Redis to scale)
 src/validate.js        checks flows against WhatsApp limits

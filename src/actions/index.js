@@ -7,10 +7,27 @@
 // as {{fieldName}}. Throwing an error sends the user to the node's "onError"
 // (or a generic error message).
 
+const crypto = require('crypto');
 const fs = require('fs/promises');
 const path = require('path');
+const { cleanText } = require('../clean');
+const { createWaRequest, frappeHeaders } = require('../frappe');
 
 const DATA_DIR = path.join(__dirname, '..', '..', 'data');
+const DEFAULT_DESK = 'WA-Ticket';
+const REFERENCE_ATTEMPTS = 3;
+const TICKET_VARS = ['ticket_desk', 'ticket_type', 'ticket_message', 'callback_phone', 'callback_date', 'callback_time'];
+
+// Exactly 10 digits, never a leading zero, so number fields and Excel cannot shorten it.
+const newReferenceId = () => String(crypto.randomInt(1_000_000_000, 10_000_000_000));
+
+// One JSON object per line. Appending keeps earlier tickets safe if the bot stops mid-write.
+async function saveFailedTicket(ticket, err) {
+  await fs.mkdir(DATA_DIR, { recursive: true });
+  const row = { at: new Date().toISOString(), error: String(err.message).slice(0, 300), ticket };
+  await fs.appendFile(path.join(DATA_DIR, 'failed-tickets.jsonl'), JSON.stringify(row) + '\n');
+  console.error(`Ticket ${ticket.reference_id} NOT saved in Frappe, stored in data/failed-tickets.jsonl: ${row.error}`);
+}
 
 // Same {{name}} filling as the engine uses for message text.
 const fill = (text, vars) =>
@@ -46,41 +63,55 @@ function buildMailPayload({ userId, vars, params }) {
 }
 
 module.exports = {
-  // Demo: saves the typed question to data/questions.jsonl and returns a reference number.
-  // Later, replace the file write with a real API call, for example:
-  //   const res = await fetch('https://your-api.example.com/tickets', {
-  //     method: 'POST',
-  //     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${process.env.CRM_TOKEN}` },
-  //     body: JSON.stringify({ phone: userId, question: vars.question }),
-  //   });
-  //   if (!res.ok) throw new Error(`CRM returned ${res.status}`);
-  //   const { id } = await res.json();
-  //   return { ticketId: id };
-  async saveQuestion({ userId, vars }) {
-    return module.exports.createTicket({ userId, vars, params: { type: 'question', team: 'our team' } });
+  // Saves the ticket desk and/or type chosen in the flow. Params: { "desk": "WA-Travel" }
+  // and/or { "type": "Query" }. A node may set one or both.
+  async setTicket({ params }) {
+    const chosen = {};
+    if (params.desk) chosen.ticket_desk = cleanText(params.desk, 60);
+    if (params.type) chosen.ticket_type = cleanText(params.type, 40);
+    return chosen;
   },
 
-  // Saves a ticket to data/questions.jsonl with a "type" column. Params:
-  //   type   ticket type, e.g. "travel", "finance", "logistics" (default "question")
-  //   team   team name shown to the user, e.g. "Travel Desk"
-  //   field  which saved answer holds the user's text (default "question")
-  // Returns { ticketId, ticketType, ticketTeam }. The ID starts with the type's
-  // first letter: T… travel, F… finance, L… logistics, Q… question.
-  async createTicket({ userId, vars, params }) {
-    const type = String(params.type || 'question').toLowerCase();
-    const team = params.team || 'our team';
-    const ticketId = type[0].toUpperCase() + Date.now().toString(36).toUpperCase();
-    await fs.mkdir(DATA_DIR, { recursive: true });
-    const row = {
-      ticketId,
+  // Saves the ticket in Frappe and returns { reference_id, ticket_id }. If Frappe cannot
+  // save it, the ticket goes to data/failed-tickets.jsonl and the node's "onError" runs,
+  // with {{reference_id}} still available for the message to the user.
+  async createRequest({ userId, vars }) {
+    const type = cleanText(vars.ticket_type, 40);
+    const isCallback = type === 'Callback';
+    const ticket = {
+      desk: cleanText(vars.ticket_desk, 60) || DEFAULT_DESK,
       type,
-      phone: userId,
-      name: vars.contact_name || '',
-      question: vars[params.field || 'question'] || '',
-      at: new Date().toISOString(),
+      contact_name: cleanText(vars.contact_name, 140),
+      contact_number: `+${userId}`,
+      message: cleanText(vars.ticket_message, 1000) || (isCallback ? 'Callback requested' : ''),
+      ...(isCallback && {
+        callback_phone: cleanText(vars.callback_phone, 20),
+        callback_date: cleanText(vars.callback_date, 10),
+        callback_time: cleanText(vars.callback_time, 8),
+      }),
     };
-    await fs.appendFile(path.join(DATA_DIR, 'questions.jsonl'), JSON.stringify(row) + '\n');
-    return { ticketId, ticketType: type, ticketTeam: team };
+    // Session values last for the whole session, so the next ticket must not reuse these.
+    for (const key of TICKET_VARS) delete vars[key];
+
+    let lastError;
+    for (let attempt = 0; attempt < REFERENCE_ATTEMPTS; attempt++) {
+      ticket.reference_id = newReferenceId();
+      ticket.wa_message_id = vars.wa_message_id || `bot-${ticket.reference_id}`;
+      vars.reference_id = ticket.reference_id;
+      if (process.env.DRY_RUN) {
+        console.log('DRY_RUN: ticket not sent to Frappe');
+        return { ticket_id: `${ticket.desk}-${ticket.reference_id}` };
+      }
+      try {
+        const saved = await createWaRequest(ticket);
+        return { reference_id: saved.reference_id, ticket_id: saved.name };
+      } catch (err) {
+        lastError = err;
+        if (err.status !== 409) break; // 409: reference already used, so try a new one
+      }
+    }
+    await saveFailedTicket(ticket, lastError);
+    throw lastError;
   },
 
   // Asks your Frappe server to send an email. The bot does not send mail itself:
@@ -102,13 +133,9 @@ module.exports = {
       return { mailSent: 'yes', mailResult: '' };
     }
 
-    const headers = { 'Content-Type': 'application/json', Accept: 'application/json' };
-    const { FRAPPE_API_KEY: key, FRAPPE_API_SECRET: secret } = process.env;
-    if (key && secret) headers.Authorization = `token ${key}:${secret}`;
-
     const res = await fetch(config.url, {
       method: 'POST',
-      headers,
+      headers: frappeHeaders(),
       body: JSON.stringify(payload),
       signal: AbortSignal.timeout(config.timeoutMs || 10000),
     });

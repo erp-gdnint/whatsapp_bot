@@ -1,0 +1,80 @@
+# Sample nginx config for the WhatsApp bot and the flow builder.
+#
+#   whatsapp.gdn.int   -> bot      127.0.0.1:3200  (set PORT=3200 in .env)
+#   wpbuilder.gdn.int  -> builder  127.0.0.1:3100  (BUILDER_PORT, default 3100)
+#
+# Install on the same host as the apps (the builder only binds to 127.0.0.1):
+#   sudo cp gdn-whatsapp.conf.sample /etc/nginx/conf.d/gdn-whatsapp.conf
+#   sudo nginx -t && sudo systemctl reload nginx
+#
+# The ssl_certificate files must exist before nginx -t will pass. Create
+# temporary self-signed ones first, then run certbot --nginx to replace them:
+#   sudo certbot --nginx -d whatsapp.gdn.int -d wpbuilder.gdn.int
+
+# Plain HTTP: redirect everything to HTTPS.
+server {
+    listen 80;
+    listen [::]:80;
+    server_name whatsapp.gdn.int wpbuilder.gdn.int;
+
+    return 301 https://$host$request_uri;
+}
+
+# Bot: Meta webhook (/webhook) and the Frappe API (/api/frappe).
+# Meta only delivers to public HTTPS with a certificate from a trusted CA,
+# so this host must be reachable from the internet.
+server {
+    listen 443 ssl;
+    listen [::]:443 ssl;
+    server_name whatsapp.gdn.int;
+
+    ssl_certificate     /etc/nginx/ssl/whatsapp.gdn.int.crt;
+    ssl_certificate_key /etc/nginx/ssl/whatsapp.gdn.int.key;
+    ssl_protocols       TLSv1.2 TLSv1.3;
+
+    client_max_body_size 10m;
+
+    access_log /var/log/nginx/whatsapp.gdn.int.access.log;
+    error_log  /var/log/nginx/whatsapp.gdn.int.error.log;
+
+    location / {
+        proxy_pass http://127.0.0.1:3200;
+        proxy_http_version 1.1;
+        proxy_set_header Host              $host;
+        proxy_set_header X-Real-IP         $remote_addr;
+        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 60s;
+    }
+}
+
+# Builder: the app has no login and can edit live flows, so only listed IPs get
+# in. Everyone else gets 403. Add your office/VPN public IP below.
+server {
+    listen 443 ssl;
+    listen [::]:443 ssl;
+    server_name wpbuilder.gdn.int;
+
+    ssl_certificate     /etc/nginx/ssl/wpbuilder.gdn.int.crt;
+    ssl_certificate_key /etc/nginx/ssl/wpbuilder.gdn.int.key;
+    ssl_protocols       TLSv1.2 TLSv1.3;
+
+    client_max_body_size 2m;
+
+    access_log /var/log/nginx/wpbuilder.gdn.int.access.log;
+    error_log  /var/log/nginx/wpbuilder.gdn.int.error.log;
+
+    allow 127.0.0.1;
+    # allow 203.0.113.10;    # example: your office/VPN public IP
+    deny  all;
+
+    location / {
+        proxy_pass http://127.0.0.1:3100;
+        proxy_http_version 1.1;
+        proxy_set_header Host              $host;
+        proxy_set_header X-Real-IP         $remote_addr;
+        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 60s;
+    }
+}

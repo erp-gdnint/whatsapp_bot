@@ -4,6 +4,7 @@
 // preview and the server.
 //
 // Incoming event:  { kind: 'text', text }  |  { kind: 'reply', id }  |  { kind: 'unsupported' }
+//                 (optional messageId -> saved as {{wa_message_id}})
 // Contact (optional): { name, phone }  -> saved as {{contact_name}} and {{contact_phone}}
 // Outgoing message: { type: 'text', text }
 //                   { type: 'buttons', text, options: [{ id, title }] }          (max 3 per message)
@@ -22,6 +23,7 @@ const DEFAULT_MESSAGES = {
   invalidPhone: 'Please type a valid phone number with country code, like +91 98765 43210.',
   invalidNumber: 'Please type a number only, like 25 or 2.5.',
   invalidDate: 'Please type a date like 25/12/2026.',
+  invalidTime: 'Please type a time like 14:30 or 2:30 pm.',
 };
 
 const fill = (text, vars) =>
@@ -39,6 +41,20 @@ function parseDate(value) {
   return date.toISOString().slice(0, 10);
 }
 
+// Accepts 14:30, 14:30:15, 2:30 pm or 2 pm and returns HH:MM:SS, or null.
+function parseTime(value) {
+  const match = /^(\d{1,2})(?:[:.](\d{2}))?(?::(\d{2}))?\s*([ap])\.?m?\.?$|^(\d{1,2})[:.](\d{2})(?::(\d{2}))?$/i.exec(value);
+  if (!match) return null;
+  const meridiem = (match[4] || '').toLowerCase();
+  let hour = Number(match[1] ?? match[5]);
+  const minute = Number(match[2] ?? match[6] ?? 0);
+  const second = Number(match[3] ?? match[7] ?? 0);
+  if (meridiem && (hour < 1 || hour > 12)) return null;
+  if (meridiem) hour = (hour % 12) + (meridiem === 'p' ? 12 : 0);
+  if (hour > 23 || minute > 59 || second > 59) return null;
+  return [hour, minute, second].map((n) => String(n).padStart(2, '0')).join(':');
+}
+
 // Each check returns the cleaned value to save, or null when the input is not acceptable.
 const INPUT_CHECKS = {
   text: (v) => v,
@@ -49,8 +65,9 @@ const INPUT_CHECKS = {
   },
   number: (v) => (/^-?\d+([.,]\d+)?$/.test(v) ? v.replace(',', '.') : null),
   date: parseDate,
+  time: parseTime,
 };
-const INPUT_ERRORS = { email: 'invalidEmail', phone: 'invalidPhone', number: 'invalidNumber', date: 'invalidDate' };
+const INPUT_ERRORS = { email: 'invalidEmail', phone: 'invalidPhone', number: 'invalidNumber', date: 'invalidDate', time: 'invalidTime' };
 
 class FlowEngine {
   constructor({ flow, store, actions = {}, logger = console }) {
@@ -77,6 +94,7 @@ class FlowEngine {
     const session = (await this.store.get(userId)) || { node: null, vars: {} };
     if (contact.name) session.vars.contact_name = contact.name;
     if (contact.phone) session.vars.contact_phone = contact.phone;
+    if (incoming.messageId) session.vars.wa_message_id = incoming.messageId;
     const out = [];
     const nodes = this.flow.nodes;
     if (session.node && !Object.prototype.hasOwnProperty.call(nodes, session.node)) session.node = null; // node was deleted
@@ -213,4 +231,4 @@ class FlowEngine {
   }
 }
 
-module.exports = { FlowEngine, parseDate, BUTTONS_PER_MESSAGE };
+module.exports = { FlowEngine, parseDate, parseTime, BUTTONS_PER_MESSAGE };

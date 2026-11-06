@@ -3,6 +3,8 @@
 //   npm run chat -- flows/x.json
 // Type text like on WhatsApp, or a number to tap that option. /reset restarts, /quit exits.
 
+process.env.DRY_RUN = '1'; // the simulator must never create real tickets
+
 const readline = require('readline');
 const { loadFlow } = require('../src/flow');
 const { FlowEngine } = require('../src/engine');

@@ -32,34 +32,14 @@
           "description": "Phone, email and address"
         },
         {
-          "id": "ask",
-          "title": "Ask a question",
-          "description": "Type your question and our team will reply"
-        },
-        {
-          "id": "callback_phone",
-          "title": "Request a callback",
-          "description": "We call you back on a day you choose"
+          "id": "raise_ticket",
+          "title": "Raise a ticket",
+          "description": "Query, complaint or callback for our team"
         },
         {
           "id": "gdn_conference",
           "title": "Gdn conference",
           "description": "Global Development Network Conference Tokyo 2026"
-        },
-        {
-          "id": "travel_desk",
-          "title": "Travel Desk",
-          "description": "Help with tickets, flights and travel-related queries"
-        },
-        {
-          "id": "finance_team",
-          "title": "Finance Team",
-          "description": "Help regarding conference reimbursements"
-        },
-        {
-          "id": "logistics_team",
-          "title": "Logistics Team",
-          "description": "Help regarding hotel accommodation and local travel"
         }
       ]
     },
@@ -75,17 +55,7 @@
       "text": "On which date? Type it like 25/12/2026.",
       "validate": "date",
       "saveAs": "callback_date",
-      "next": "callback_done"
-    },
-    "callback_done": {
-      "type": "buttons",
-      "text": "Thanks {{contact_name}}! We will call *{{callback_phone}}* on *{{callback_date}}*.",
-      "options": [
-        {
-          "id": "main",
-          "title": "Main menu"
-        }
-      ]
+      "next": "callback_time"
     },
     "about": {
       "type": "buttons",
@@ -96,8 +66,8 @@
           "title": "Main menu"
         },
         {
-          "id": "ask",
-          "title": "Ask a question"
+          "id": "raise_ticket",
+          "title": "Raise a ticket"
         }
       ]
     },
@@ -110,41 +80,8 @@
           "title": "Main menu"
         },
         {
-          "id": "ask",
-          "title": "Ask a question"
-        }
-      ]
-    },
-    "ask": {
-      "type": "input",
-      "text": "Please type your question in one message.\n(Type *menu* to go back.)",
-      "saveAs": "question",
-      "minLength": 5,
-      "errorText": "Please type a bit more (at least 5 characters).",
-      "next": "ask_save"
-    },
-    "ask_save": {
-      "type": "action",
-      "action": "saveQuestion",
-      "next": "ask_mail"
-    },
-    "ask_mail": {
-      "type": "action",
-      "action": "sendMail",
-      "params": {
-        "subject": "WhatsApp question {{ticketId}} from {{contact_name}}",
-        "message": "A new question came in on the WhatsApp bot.\n\nReference: {{ticketId}}\nName: {{contact_name}}\nWhatsApp: +{{user_phone}}\n\nQuestion:\n{{question}}"
-      },
-      "next": "ask_done",
-      "onError": "ask_done"
-    },
-    "ask_done": {
-      "type": "buttons",
-      "text": "Thanks! We saved your question.\nReference: *{{ticketId}}*\nOur team will reply here soon.",
-      "options": [
-        {
-          "id": "main",
-          "title": "Main menu"
+          "id": "raise_ticket",
+          "title": "Raise a ticket"
         }
       ]
     },
@@ -158,86 +95,161 @@
         }
       ]
     },
-    "travel_desk": {
-      "type": "input",
-      "text": "*Connect with Travel Desk*\nHelp with tickets, flights and travel-related queries.\n\nPlease type your query in one message.\n(Type *menu* to go back.)",
-      "saveAs": "query",
-      "minLength": 5,
-      "errorText": "Please type a bit more (at least 5 characters).",
-      "next": "travel_ticket"
-    },
-    "travel_ticket": {
-      "type": "action",
-      "action": "createTicket",
-      "params": { "type": "travel", "team": "Travel Desk", "field": "query" },
-      "next": "travel_mail"
-    },
-    "travel_mail": {
-      "type": "action",
-      "action": "sendMail",
-      "params": {
-        "to": "rkumar@gdn.int",
-        "subject": "WhatsApp travel query {{ticketId}} from {{contact_name}}",
-        "message": "A travel query came in on the WhatsApp bot.\n\nReference: {{ticketId}}\nType: {{ticketType}}\nName: {{contact_name}}\nWhatsApp: +{{user_phone}}\n\nQuery:\n{{query}}"
-      },
-      "next": "ticket_done",
-      "onError": "ticket_done"
-    },
-    "finance_team": {
-      "type": "input",
-      "text": "*Connect with the Finance Team*\nHelp regarding conference reimbursements.\n\nPlease type your query in one message.\n(Type *menu* to go back.)",
-      "saveAs": "query",
-      "minLength": 5,
-      "errorText": "Please type a bit more (at least 5 characters).",
-      "next": "finance_ticket"
-    },
-    "finance_ticket": {
-      "type": "action",
-      "action": "createTicket",
-      "params": { "type": "finance", "team": "Finance Team", "field": "query" },
-      "next": "finance_mail"
-    },
-    "finance_mail": {
-      "type": "action",
-      "action": "sendMail",
-      "params": {
-        "to": "rkumar@gdn.int",
-        "subject": "WhatsApp finance query {{ticketId}} from {{contact_name}}",
-        "message": "A finance query came in on the WhatsApp bot.\n\nReference: {{ticketId}}\nType: {{ticketType}}\nName: {{contact_name}}\nWhatsApp: +{{user_phone}}\n\nQuery:\n{{query}}"
-      },
-      "next": "ticket_done",
-      "onError": "ticket_done"
-    },
-    "logistics_team": {
-      "type": "input",
-      "text": "*Connect with the Logistics Team*\nHelp regarding hotel accommodation and local travel.\n\nPlease type your query in one message.\n(Type *menu* to go back.)",
-      "saveAs": "query",
-      "minLength": 5,
-      "errorText": "Please type a bit more (at least 5 characters).",
-      "next": "logistics_ticket"
-    },
-    "logistics_ticket": {
-      "type": "action",
-      "action": "createTicket",
-      "params": { "type": "logistics", "team": "Logistics Team", "field": "query" },
-      "next": "logistics_mail"
-    },
-    "logistics_mail": {
-      "type": "action",
-      "action": "sendMail",
-      "params": {
-        "to": "rkumar@gdn.int",
-        "subject": "WhatsApp logistics query {{ticketId}} from {{contact_name}}",
-        "message": "A logistics query came in on the WhatsApp bot.\n\nReference: {{ticketId}}\nType: {{ticketType}}\nName: {{contact_name}}\nWhatsApp: +{{user_phone}}\n\nQuery:\n{{query}}"
-      },
-      "next": "ticket_done",
-      "onError": "ticket_done"
-    },
     "ticket_done": {
       "type": "buttons",
-      "text": "Thanks {{contact_name}}! Your query has been sent to the *{{ticketTeam}}*.\nReference: *{{ticketId}}*\nThey will get back to you soon.",
+      "text": "Thanks {{contact_name}}! Your ticket has been raised.\nReference ID: *{{reference_id}}*\nOur team will contact you soon.",
       "options": [
-        { "id": "main", "title": "Main menu" }
+        {
+          "id": "main",
+          "title": "Main menu"
+        }
+      ]
+    },
+    "raise_ticket": {
+      "type": "list",
+      "text": "What would you like to raise?",
+      "button": "Choose type",
+      "sectionTitle": "Ticket type",
+      "options": [
+        {
+          "id": "type_query",
+          "title": "Query"
+        },
+        {
+          "id": "type_complaint",
+          "title": "Complaint"
+        },
+        {
+          "id": "type_callback",
+          "title": "Callback",
+          "description": "We call you back on a day you choose"
+        },
+        {
+          "id": "type_other",
+          "title": "Other"
+        }
+      ]
+    },
+    "type_query": {
+      "type": "action",
+      "action": "setTicket",
+      "params": {
+        "type": "Query"
+      },
+      "next": "raise_desk"
+    },
+    "type_complaint": {
+      "type": "action",
+      "action": "setTicket",
+      "params": {
+        "type": "Complaint"
+      },
+      "next": "raise_desk"
+    },
+    "type_callback": {
+      "type": "action",
+      "action": "setTicket",
+      "params": {
+        "type": "Callback"
+      },
+      "next": "callback_phone"
+    },
+    "type_other": {
+      "type": "action",
+      "action": "setTicket",
+      "params": {
+        "type": "Other"
+      },
+      "next": "raise_desk"
+    },
+    "callback_time": {
+      "type": "input",
+      "text": "At what time? Type it like 14:30 or 2:30 pm.",
+      "validate": "time",
+      "saveAs": "callback_time",
+      "next": "raise_desk"
+    },
+    "raise_desk": {
+      "type": "list",
+      "text": "Which team is this for?",
+      "button": "Choose team",
+      "sectionTitle": "Teams",
+      "options": [
+        {
+          "id": "desk_travel",
+          "title": "Travel",
+          "description": "Tickets, flights and travel queries"
+        },
+        {
+          "id": "desk_finance",
+          "title": "Finance",
+          "description": "Conference reimbursements"
+        },
+        {
+          "id": "desk_logistic",
+          "title": "Logistic",
+          "description": "Hotel accommodation and local travel"
+        },
+        {
+          "id": "desk_other",
+          "title": "Other"
+        }
+      ]
+    },
+    "desk_travel": {
+      "type": "action",
+      "action": "setTicket",
+      "params": {
+        "desk": "WA-Travel"
+      },
+      "next": "ticket_message"
+    },
+    "desk_finance": {
+      "type": "action",
+      "action": "setTicket",
+      "params": {
+        "desk": "WA-Finance"
+      },
+      "next": "ticket_message"
+    },
+    "desk_logistic": {
+      "type": "action",
+      "action": "setTicket",
+      "params": {
+        "desk": "WA-Logistic"
+      },
+      "next": "ticket_message"
+    },
+    "desk_other": {
+      "type": "action",
+      "action": "setTicket",
+      "params": {
+        "desk": "WA-Ticket"
+      },
+      "next": "ticket_message"
+    },
+    "ticket_message": {
+      "type": "input",
+      "text": "Please type your message in one message.\n(Type *menu* to go back.)",
+      "saveAs": "ticket_message",
+      "minLength": 5,
+      "errorText": "Please type a bit more (at least 5 characters).",
+      "next": "ticket_create"
+    },
+    "ticket_create": {
+      "type": "action",
+      "action": "createRequest",
+      "next": "ticket_done",
+      "onError": "ticket_failed"
+    },
+    "ticket_failed": {
+      "type": "buttons",
+      "text": "Sorry {{contact_name}}, we could not reach our team just now. Your request is saved on our side.\nReference ID: *{{reference_id}}*\nPlease keep this number when you contact us.",
+      "options": [
+        {
+          "id": "main",
+          "title": "Main menu"
+        }
       ]
     }
   },
@@ -247,59 +259,86 @@
         "x": 30,
         "y": 30
       },
-      "callback_phone": {
-        "x": 320,
-        "y": 30
-      },
       "about": {
         "x": 320,
-        "y": 179
+        "y": 30
       },
       "contact": {
         "x": 320,
-        "y": 387
-      },
-      "ask": {
-        "x": 320,
-        "y": 595
-      },
-      "callback_date": {
-        "x": 610,
-        "y": 30
-      },
-      "ask_save": {
-        "x": 610,
-        "y": 168
-      },
-      "callback_done": {
-        "x": 900,
-        "y": 30
-      },
-      "ask_done": {
-        "x": 1190,
-        "y": 30
+        "y": 240
       },
       "gdn_conference": {
         "x": 320,
-        "y": 744
+        "y": 450
       },
-      "travel_desk": {
+      "raise_ticket": {
         "x": 320,
-        "y": 923
+        "y": 640
       },
-      "ask_mail": {
+      "type_query": {
+        "x": 610,
+        "y": 640
+      },
+      "type_complaint": {
+        "x": 610,
+        "y": 800
+      },
+      "type_other": {
+        "x": 610,
+        "y": 960
+      },
+      "type_callback": {
+        "x": 610,
+        "y": 1120
+      },
+      "callback_phone": {
         "x": 900,
-        "y": 209
+        "y": 1120
       },
-      "travel_ticket": { "x": 610, "y": 923 },
-      "travel_mail": { "x": 900, "y": 923 },
-      "finance_team": { "x": 320, "y": 1100 },
-      "finance_ticket": { "x": 610, "y": 1100 },
-      "finance_mail": { "x": 900, "y": 1100 },
-      "logistics_team": { "x": 320, "y": 1277 },
-      "logistics_ticket": { "x": 610, "y": 1277 },
-      "logistics_mail": { "x": 900, "y": 1277 },
-      "ticket_done": { "x": 1190, "y": 1100 }
+      "callback_date": {
+        "x": 1190,
+        "y": 1120
+      },
+      "callback_time": {
+        "x": 1480,
+        "y": 1120
+      },
+      "raise_desk": {
+        "x": 900,
+        "y": 640
+      },
+      "desk_travel": {
+        "x": 1190,
+        "y": 480
+      },
+      "desk_finance": {
+        "x": 1190,
+        "y": 640
+      },
+      "desk_logistic": {
+        "x": 1190,
+        "y": 800
+      },
+      "desk_other": {
+        "x": 1190,
+        "y": 960
+      },
+      "ticket_message": {
+        "x": 1480,
+        "y": 640
+      },
+      "ticket_create": {
+        "x": 1770,
+        "y": 640
+      },
+      "ticket_done": {
+        "x": 2060,
+        "y": 560
+      },
+      "ticket_failed": {
+        "x": 2060,
+        "y": 760
+      }
     }
   }
 }

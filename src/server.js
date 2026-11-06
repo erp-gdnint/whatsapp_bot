@@ -7,15 +7,19 @@ const { FlowEngine } = require('./engine');
 const { MemoryStore } = require('./store');
 const { createWhatsAppClient, parseIncoming } = require('./whatsapp');
 const actions = require('./actions');
+const { createFrappeRouter } = require('./frappe-api');
 
 const env = process.env;
-for (const key of ['WHATSAPP_TOKEN', 'PHONE_NUMBER_ID', 'VERIFY_TOKEN']) {
+for (const key of ['WHATSAPP_TOKEN', 'PHONE_NUMBER_ID', 'VERIFY_TOKEN', 'APP_SECRET', 'FRAPPE_TO_BOT_TOKEN']) {
   if (!env[key]) {
     console.error(`Missing ${key} in .env (see .env.example)`);
     process.exit(1);
   }
 }
-if (!env.APP_SECRET) console.warn('APP_SECRET not set: webhook signatures are NOT being checked.');
+if (env.FRAPPE_TO_BOT_TOKEN.length < 32) {
+  console.error('FRAPPE_TO_BOT_TOKEN is too short: use at least 32 random characters (see .env.example)');
+  process.exit(1);
+}
 
 const flowFile = env.FLOW_FILE || 'flows/faq.json';
 let flow = loadFlow(flowFile, actions);
@@ -64,7 +68,6 @@ const enqueue = (userId, task) => {
 };
 
 function signatureIsValid(req) {
-  if (!env.APP_SECRET) return true;
   const header = req.get('x-hub-signature-256') || '';
   const expected = 'sha256=' + crypto.createHmac('sha256', env.APP_SECRET).update(req.rawBody || '').digest('hex');
   const a = Buffer.from(header);
@@ -99,9 +102,9 @@ app.post('/webhook', (req, res) => {
     if (isDuplicate(messageId)) continue;
     enqueue(from, async () => {
       try {
-        console.log(`<- ${mask(from)}`, incoming.kind === 'text' ? `"${incoming.text}"` : incoming.kind, incoming.id || '');
+        console.log(`<- ${mask(from)}`, incoming.kind, incoming.id || '');
         wa.markRead(messageId);
-        const replies = await engine.handle(from, incoming, contact);
+        const replies = await engine.handle(from, { ...incoming, messageId }, contact);
         await wa.sendAll(from, replies);
         console.log(`-> ${mask(from)} ${replies.length} message(s)`);
       } catch (err) {
@@ -110,6 +113,9 @@ app.post('/webhook', (req, res) => {
     });
   }
 });
+
+// Frappe calls this to send WhatsApp messages. Every route here needs the shared token.
+app.use('/api/frappe', createFrappeRouter({ token: env.FRAPPE_TO_BOT_TOKEN, wa }));
 
 const port = Number(env.PORT) || 3000;
 app.listen(port, () => console.log(`Bot listening on http://localhost:${port}  (webhook path: /webhook)`));
