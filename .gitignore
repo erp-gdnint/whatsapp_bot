@@ -5,5 +5,8 @@ flows/.backup/
 .env.bkp
 .env.prod
 docs/
+flows/*
+!flows/faq.json
+!flows/.gitkeep
 
 frappe-side/

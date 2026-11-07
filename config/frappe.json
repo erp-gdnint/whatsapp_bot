@@ -1,6 +1,6 @@
 {
   "_help": "Bot-to-Frappe settings. createRequestUrl is the Frappe method that saves a ticket, from frappe-side/wa_tickets.py. allowedTemplates lists the only templates Frappe may ask the bot to send. Secrets go in .env, never here. Changes apply on the next call; no restart needed.",
-  "createRequestUrl": "https://app.gdn.int/api/method/create_wa_request",
+  "createRequestUrl": "https://app.gdn.int/api/method/gdnerp.customisations.whatsapp.create_wa_request",
   "timeoutMs": 10000,
   "allowedTemplates": ["ticket_assigned"]
 }
