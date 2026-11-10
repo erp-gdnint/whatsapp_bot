@@ -16,7 +16,7 @@ const { createWaRequest, frappeHeaders } = require('../frappe');
 const DATA_DIR = path.join(__dirname, '..', '..', 'data');
 const DEFAULT_DESK = 'WA-Ticket';
 const REFERENCE_ATTEMPTS = 3;
-const TICKET_VARS = ['ticket_desk', 'ticket_type', 'ticket_message', 'callback_phone', 'callback_date', 'callback_time'];
+const TICKET_VARS = ['ticket_desk', 'ticket_type', 'ticket_message', 'contact_email', 'callback_phone', 'callback_date', 'callback_time'];
 
 // Exactly 10 digits, never a leading zero, so number fields and Excel cannot shorten it.
 const newReferenceId = () => String(crypto.randomInt(1_000_000_000, 10_000_000_000));
@@ -83,6 +83,7 @@ module.exports = {
       type,
       contact_name: cleanText(vars.contact_name, 140),
       contact_number: `+${userId}`,
+      email: cleanText(vars.contact_email, 140),
       message: cleanText(vars.ticket_message, 1000) || (isCallback ? 'Callback requested' : ''),
       ...(isCallback && {
         callback_phone: cleanText(vars.callback_phone, 20),
